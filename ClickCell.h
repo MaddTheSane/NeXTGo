@@ -1,9 +1,12 @@
 #include "comment.header"
 
-/* $Id: ClickCell.h,v 1.3 1997/07/06 19:38:20 ergo Exp $ */
+/* $Id: ClickCell.h,v 1.4 1997/11/04 16:49:53 ergo Exp $ */
 
 /*
  * $Log: ClickCell.h,v $
+ * Revision 1.4  1997/11/04 16:49:53  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:38:20  ergo
  * actual version
  *
@@ -12,10 +15,11 @@
  *
  */
 
-#import <appkit/TextFieldCell.h>
+#import <AppKit/NSTextFieldCell.h>
 
-@interface ClickCell:TextFieldCell
+@interface ClickCell:NSTextFieldCell
 {
+
 }
 
 

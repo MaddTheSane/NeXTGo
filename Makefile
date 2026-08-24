@@ -9,27 +9,29 @@
 
 NAME = NeXTGo
 
-PROJECTVERSION = 1.1
-LANGUAGE = German
+PROJECTVERSION = 2.6
+PROJECT_TYPE = Application
+LANGUAGE = English
 
-APPICON = NeXTGo.tiff
-DOCICONS = NeXTGoFile.tiff
+NEXTSTEP_APPICON = NeXTGo.tiff
+NEXTSTEP_DOCICONS = NeXTGoFile.tiff NeXTGoFile.tiff
 
-GLOBAL_RESOURCES = NeXTGo.nib Background.tiff NeXTGo.tiff\
-                   NeXTGoFile.tiff intergo.dct Makefile\
-                   Makefile.postamble NeXTGo.background-2.0.draw\
-                   NeXTGo.background.draw NeXTGoHelp.rtf
+ICONSECTIONS =	-sectcreate __ICON app NeXTGo.tiff \
+		-sectcreate __ICON NeXTGoFile NeXTGoFile.tiff
 
-CLASSES = AutoWidthMatrix.m Board.m ClickCell.m Controller.m\
-          GameInspectorPanel.m GoApp.m GoServer.m GoWindow.m\
-          MatrixScrollView.m MiscString.m MiscStringFields.m\
-          MiscStringInsertion.m MiscStringModification.m\
-          MiscStringSearching.m ServerList.m
+LOCAL_RESOURCES = NeXTGo.nib
 
-HFILES = AutoWidthMatrix.h Board.h ClickCell.h Controller.h\
-         GameInspectorPanel.h gnugo.h GoApp.h godict.h GoServer.h\
-         GoWindow.h history.h igs.h MatrixScrollView.h MiscString.h\
-         patterns.h ServerList.h shared.h smartgo.h smgcom.h
+GLOBAL_RESOURCES = Background.tiff NeXTGo.tiff NeXTGoFile.tiff\
+                   intergo.dct Makefile Makefile.postamble\
+                   NeXTGo.background-2.0.draw NeXTGo.background.draw\
+                   NeXTGoHelp.rtf
+
+CLASSES = Board.m ClickCell.m Controller.m GameInspectorPanel.m\
+          GoApp.m GoServer.m GoWindow.m
+
+HFILES = Board.h ClickCell.h Controller.h GameInspectorPanel.h gnugo.h\
+         GoApp.h godict.h GoServer.h GoWindow.h history.h igs.h\
+         patterns.h shared.h smartgo.h smgcom.h
 
 MFILES = igsglue.m igssocket.m NeXTGo_main.m
 
@@ -43,23 +45,27 @@ OTHERSRCS = comment.header COPYING Documentation.gnugo igs.protocol\
             README README.gnugo
 
 
-MAKEFILEDIR = /NextDeveloper/Makefiles/app
+MAKEFILEDIR = $(NEXT_ROOT)/NextDeveloper/Makefiles/pb_makefiles
+CODE_GEN_STYLE = DYNAMIC
 MAKEFILE = app.make
-INSTALLDIR = $(HOME)/Apps
-INSTALLFLAGS = -c -s -m 755
-SOURCEMODE = 444
-
-ICONSECTIONS =	-sectcreate __ICON app NeXTGo.tiff \
-		-sectcreate __ICON NeXTGoFile NeXTGoFile.tiff
-
-LIBS = -lMedia_s -lNeXT_s
+NEXTSTEP_INSTALLDIR = $(HOME)/Apps
+WINDOWS_INSTALLDIR = $(HOME)/Apps
+PDO_UNIX_INSTALLDIR = $(HOME)/Apps
+LIBS = 
 DEBUG_LIBS = $(LIBS)
 PROF_LIBS = $(LIBS)
 
 
-LIBRARY_PATHS = -L
-PB_LDFLAGS = -v
+LIBRARY_PATHS = -L/NextLibrary/Frameworks/AppKit.framework/AppKit\
+                -L/NextLibrary/Frameworks/Foundation.framework/Foundation
+FRAMEWORK_PATHS =\
+                  -F$(NEXT_ROOT)/NextLibrary/Frameworks/Foundation.framework\
+                  -F$(NEXT_ROOT)/NextLibrary/Frameworks/AppKit.framework\
+                  -F$(NEXT_ROOT)/NextLibrary/Frameworks/SoundKit.framework
+FRAMEWORKS = -framework AppKit -framework Foundation -framework SoundKit
 
+
+include $(MAKEFILEDIR)/platform.make
 
 -include Makefile.preamble
 

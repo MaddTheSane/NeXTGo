@@ -1,9 +1,12 @@
 #include "comment.header"
-
-/* $Id: igsglue.m,v 1.3 1997/07/06 19:37:59 ergo Exp $ */
+ 
+/* $Id: igsglue.m,v 1.4 1997/11/04 16:52:58 ergo Exp $ */
 
 /*
  * $Log: igsglue.m,v $
+ * Revision 1.4  1997/11/04 16:52:58  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:37:59  ergo
  * actual version
  *
@@ -18,7 +21,7 @@
 #include <string.h>
 #include "shared.h"
 
-#import <appkit/appkit.h>
+#import <AppKit/AppKit.h>
 #import "GoApp.h"
 #import "Board.h"
 
@@ -46,13 +49,11 @@ void showboard(boardtype b) {
 		for (j = 0; j < 19; j++)
 			p[i][j] = b[i][j];
 
-	[[NXApp getGoView] refreshIO];
+	[[NSApp getGoView] refreshIO];
 }
 
 void igsbeep(void) {
-
-	id beepSound = [Sound findSoundFor:"Bonk"];
-	[beepSound play];
+    NSBeep();
 }
 
 int startgame(int n) {
@@ -68,16 +69,16 @@ int startgame(int n) {
 				exit(1);
     	} while (!ret);
     	if (mesg.id == MOVE)
-      	[NXApp SetIGSStatus:"%Premature move.  Restart game.\n"];
+      	[NSApp SetIGSStatus:"%Premature move.  Restart game.\n"];
   	} while (mesg.id != GAMES);
 	if (mesg.gamecount != 1)
     	return -1;
   	if (mesg.gamelist[0].bsize > 19) {
-    	[NXApp SetIGSStatus:"%Boardsize too large\n"];
+    	[NSApp SetIGSStatus:"%Boardsize too large\n"];
     	return -1;
   	}
   	if (observing) {
-    	[NXApp SetIGSStatus:"Removing observe\n"];
+    	[NSApp SetIGSStatus:"Removing observe\n"];
     	sprintf(str, "unobserve\n");
     	sendstr(str);
     	do {
@@ -91,119 +92,112 @@ int startgame(int n) {
   	}
   	ingame = n;
   	MAXX = MAXY = mesg.gamelist[0].bsize;
-  	[[NXApp getGoView] startNewGame];
-  	[[NXApp getGoView] refreshIO];
-  	[[NXApp getGoView] display];
-  	[[NXApp getGoView] setGameNumber:ingame];
+  	[[NSApp getGoView] startNewGame];
+  	[[NSApp getGoView] refreshIO];
+  	[[NSApp getGoView] display];
+  	[[NSApp getGoView] setGameNumber:ingame];
   	sprintf(str, "%s (%s)", mesg.gamelist[0].white, mesg.gamelist[0].wrank);
-  	[[NXApp getGoView] setWhiteName:str];
+  	[[NSApp getGoView] setWhiteName:str];
   	sprintf(str, "%s (%s)", mesg.gamelist[0].black, mesg.gamelist[0].brank);
-  	[[NXApp getGoView] setBlackName:str];
-  	[[NXApp getGoView] setIGSHandicap:mesg.gamelist[0].hcap];
+  	[[NSApp getGoView] setBlackName:str];
+  	[[NSApp getGoView] setIGSHandicap:mesg.gamelist[0].hcap];
   	sprintf(str, "%3.1f", mesg.gamelist[0].komi);
-  	[[NXApp getGoView] setIGSKomi:str];
-	[[NXApp getGoView] setByoTime:mesg.byo];
+  	[[NSApp getGoView] setIGSKomi:str];
+	[[NSApp getGoView] setByoTime:mesg.byo];
   	boardon = 1;
   	return 0;
 }
 
 void makemove(int x, int y, int movenum, int color, int btime, int bbyo,
 	      int wtime, int wbyo) {
-	extern void sethand(int);
+    extern void sethand(int);
 	
-	if ((x < MAXX) && (y < MAXY)) {
-		[[NXApp getGoView] makeMove: color: x: y];
-		[[NXApp getGoView] setTimeAndByo: btime: bbyo: wtime: wbyo];
-		[[NXApp getGoView] dispTime];
+    if ((x < MAXX) && (y < MAXY)) {
+        [[NSApp getGoView] makeMove: color: x: y];
+        [[NSApp getGoView] setTimeAndByo: btime: bbyo: wtime: wbyo];
+        [[NSApp getGoView] dispTime];
     }
-  	else if (x > 100) {
-      sethand(x-100);
-      [[NXApp getGoView] display];
+    else if (x > 100) {
+        sethand(x-100);
+        [[NSApp getGoView] setIGSHandicap:x-100];
+        [[NSApp getGoView] display];
     }
 }
 
 void makemovesilent(int x, int y, int movenum, int color, int btime, int bbyo,
-	      int wtime, int wbyo)
-{
-  extern void sethand(int);
+	      int wtime, int wbyo) {
+    extern void sethand(int);
 
-  if ((x < MAXX) && (y < MAXY))
-    {
-      [[NXApp getGoView] makeMoveSilent: color: x: y];
+    if ((x < MAXX) && (y < MAXY)) {
+        [[NSApp getGoView] makeMoveSilent: color: x: y];
     }
-  else if (x > 100)
-    {
+    else if (x > 100) {
       sethand(x-100);
     }
 }
 
-void removeGroup(int x, int y)
-{
-  extern unsigned char p[19][19], patternmat[19][19];
-  extern int blackCaptured, whiteCaptured, currentStone;
-  extern void find_pattern_in_board(int,int);
-  int i, j;
+void removeGroup(int x, int y)	{
+    extern unsigned char p[19][19], patternmat[19][19];
+    extern int blackCaptured, whiteCaptured, currentStone;
+    extern void find_pattern_in_board(int,int);
+    int i, j;
 
-  currentStone = p[x][y];
+    currentStone = p[x][y];
 
-  find_pattern_in_board(x,y);
-  for (i = 0; i < MAXX; i++)
-    for (j = 0; j < MAXY; j++)
-      if (patternmat[i][j])
-	{
-	  p[i][j] = EMPTY;
-	  if (currentStone==BLACK)
-	    blackCaptured++;
-	  else
-	    whiteCaptured++;
-	}
+    find_pattern_in_board(x,y);
+    for (i = 0; i < MAXX; i++)
+        for (j = 0; j < MAXY; j++)
+            if (patternmat[i][j]) {
+                p[i][j] = EMPTY;
+                if (currentStone==BLACK)
+                    blackCaptured++;
+                else
+                    whiteCaptured++;
+                }
+    [[NSApp getGoView] setblacksPrisoners:blackCaptured];
+    [[NSApp getGoView] setwhitesPrisoners:whiteCaptured];
 
-  [[NXApp getGoView] setblacksPrisoners:blackCaptured];
-  [[NXApp getGoView] setwhitesPrisoners:whiteCaptured];
-
-  [[NXApp getGoView] refreshIO];
+    [[NSApp getGoView] refreshIO];
 }
 
-void getmoves(int n)
-{
-  int ret;
-  char str[100];
-  
-  sprintf(str, "moves %d\n", n);
-  sendstr(str);
-  do {
+void getmoves(int n) {
+    int ret;
+    char str[100];
+
+    sprintf(str, "moves %d\n", n);
+    sendstr(str);
     do {
-      ret = getmessage(&mesg, 0);
-      if (ret < 0)
-	exit(1);
-    } while (!ret);
-    if (mesg.id == MOVE)
-      makemovesilent(mesg.x, mesg.y, mesg.movenum, mesg.color, mesg.btime,
-	       mesg.bbyo, mesg.wtime, mesg.wbyo);
-    else if (mesg.id && mesg.id != PROMPT)
-      [NXApp SetIGSStatus:mesg.text];
-  } while (mesg.id != PROMPT);	/* MOVE || mesg.id == 0); */
-  lastMove--;
-  makemove(mesg.x, mesg.y, mesg.movenum, mesg.color, mesg.btime,
+        do {
+            ret = getmessage(&mesg, 0);
+            if (ret < 0)
+                exit(1);
+        } while (!ret);
+        if (mesg.id == MOVE)
+            makemovesilent(mesg.x, mesg.y, mesg.movenum, mesg.color, mesg.btime,
+                           mesg.bbyo, mesg.wtime, mesg.wbyo);
+        else if (mesg.id && mesg.id != PROMPT)
+            [NSApp SetIGSStatus:mesg.text];
+    } while (mesg.id != PROMPT);	/* MOVE || mesg.id == 0); */
+    lastMove--;
+    makemove(mesg.x, mesg.y, mesg.movenum, mesg.color, mesg.btime,
 	   mesg.bbyo, mesg.wtime, mesg.wbyo);
-  [[NXApp getGoView] refreshIO];
-  [[NXApp getGoView] display];
+    [[NSApp getGoView] refreshIO];
+    [[NSApp getGoView] display];
 }
 
-void getgames(message *mess)
-{
-  int ret;
+void getgames(message *mess) {
+    int ret;
 
-  sendstr("games\n");
-  do {
+    sendstr("games\n");
     do {
-      ret = getmessage(mess, 0);
-      if (ret < 0)
-	exit(1);
-    } while (!ret);
-    if (mess->id == MOVE)
-      [NXApp SetIGSStatus:"%Premature move.  Restart game.\n"];
-  } while (mess->id != GAMES);
+        do {
+            ret = getmessage(mess, 0);
+            if (ret < 0)
+                exit(1);
+        } while (!ret);
+        if (mess->id == MOVE)
+            [NSApp SetIGSStatus:"%Premature move.  Restart game.\n"];
+    } while (mess->id != GAMES);
 }
 
 void unobserve(void) {
@@ -218,7 +212,7 @@ int observegame(int n) {
 	char str[20];
   
 	if (!observing && ingame != -1) {
-    	[NXApp SetIGSStatus:"Can't observe while playing.\n"];
+    	[NSApp SetIGSStatus:"Can't observe while playing.\n"];
     	return 1;
   	}
   	if (startgame(n))
@@ -234,7 +228,7 @@ int observegame(int n) {
 				exit(1);
     	} while (!ret);
     	if ((mesg.id == INFO) && !strncmp(mesg.text, "Removing", 8))
-      		[NXApp SetIGSStatus:"%fatal sync error.  Restart igs.\n"];
+      		[NSApp SetIGSStatus:"%fatal sync error.  Restart igs.\n"];
 	} while (mesg.id != MOVE && mesg.id != UNDO);
   	return 0;
 }
@@ -262,70 +256,68 @@ void setgame(int newgame) {
 	}
 }
 
-void loadgame(char *name)
-{
-  char str[100];
-  int ret;
-  sprintf(str, "load %s\n", name);
-  sendstr(str);
-  do {
-    ret = getmessage(&mesg, 0);
-    if (ret < 0)
-      exit(1);
-    sprintf(str, "&&%d&&\n", mesg.id);
-    [NXApp SetIGSStatus:str];
-  } while (mesg.id != MOVE && mesg.id != ERROR);
-  if (mesg.id == ERROR)
-    [NXApp SetIGSStatus:mesg.text];
-  else {
-    if (!startgame(mesg.gamenum))
-      getmoves(mesg.gamenum);
-  }
+void loadgame(char *name) {
+    char str[100];
+    int ret;
+    sprintf(str, "load %s\n", name);
+    sendstr(str);
+    do {
+        ret = getmessage(&mesg, 0);
+        if (ret < 0)
+            exit(1);
+        sprintf(str, "&&%d&&\n", mesg.id);
+        [NSApp SetIGSStatus:str];
+    } while (mesg.id != MOVE && mesg.id != ERROR);
+    if (mesg.id == ERROR)
+        [NSApp SetIGSStatus:mesg.text];
+    else {
+        if (!startgame(mesg.gamenum))
+            getmoves(mesg.gamenum);
+    }
 }
 
-void doserver(void)
-{
+void doserver(void) {
   	int ret;
-  	NXEvent peek_ev, *get_ev;
+//  	NSEvent  *get_ev;
   
   	loc = local;
   	idle = 0;
   	ret = getmessage(&mesg, 1);
   	if (ret < 0 && ret != KEY) {
-    	[NXApp SetIGSStatus:"Connection closed\n"];
+    	[NSApp SetIGSStatus:"Connection closed\n"];
   	}
   	if (ret > 0)
     	switch (mesg.id) {
     		case QUITMESG:
-      			[NXApp SetIGSStatus:mesg.text];
+      			[NSApp SetIGSStatus:mesg.text];
       			break;
     		case ONSERVER:
-      			[NXApp SetIGSStatus:"Connection established\n"];
+      			[NSApp SetIGSStatus:"Connection established\n"];
       			break;
     		case BEEP:
     	  		break;
     		case MOVE:
       			if (!boardon)
-					[NXApp SetIGSStatus:"%Error: isolated move received\n"];
+				[NSApp SetIGSStatus:"%Error: isolated move received\n"];
       			else {
-					makemove(mesg.x, mesg.y, mesg.movenum, mesg.color, 
-							 mesg.btime,
-		 					 mesg.bbyo, mesg.wtime, mesg.wbyo);
-					setgame(mesg.gamenum);
+				makemove(mesg.x, mesg.y, mesg.movenum, mesg.color, 
+					 mesg.btime,
+					 mesg.bbyo, mesg.wtime, mesg.wbyo);
+				setgame(mesg.gamenum);
       			}
       			break;
     		case UNDO:
       			if (!boardon)
-					[NXApp SetIGSStatus:"%Error: isolated undo received"];
+				[NSApp SetIGSStatus:"%Error: isolated undo received"];
       			else {
-					setgame(mesg.gamenum);
-					[[NXApp getGoView] undo];
-					[[NXApp getGoView] display];
+				setgame(mesg.gamenum);
+				[[NSApp getGoView] undo];
+				[[NSApp getGoView] display];
       			}
       			break;
     		case SCOREUNDO:
       			/*	endgame();  */
-      			[NXApp SetIGSStatus:"Scoring undone."];
+      			[NSApp SetIGSStatus:"Scoring undone."];
       			break;
     		case LOAD:
       			if (!startgame(mesg.gamenum))
@@ -339,42 +331,42 @@ void doserver(void)
       			break;
     		case SCORE:
       			{
-					char str[50];
-					showboard(mesg.board);
-					sprintf(str, "Black: %g\nWhite: %g\n", mesg.bscore,
-					mesg.wscore);
-					[NXApp SetIGSStatus:str];
+                            char str[50];
+                            showboard(mesg.board);
+                            sprintf(str, "Black: %g\nWhite: %g\n", mesg.bscore,
+                                    mesg.wscore);
+                            [NSApp SetIGSStatus:str];
       			}
       			break;
     		case LOOK_M: {
       			int pris[2];
       			if (mesg.boardsize > 19)
-					[NXApp SetIGSStatus:"%Boardsize of saved game too big.\n"];
+					[NSApp SetIGSStatus:"%Boardsize of saved game too big.\n"];
       			else {
 					MAXX = MAXY = mesg.boardsize;
-					[[NXApp getGoView] startNewGame];
-					[[NXApp getGoView] display];
+					[[NSApp getGoView] startNewGame];
+					[[NSApp getGoView] display];
 					boardon = 1;
 					pris[0] = mesg.bcap;
 					pris[1] = mesg.wcap;
-					[[NXApp getGoView] setblacksPrisoners:pris[0]];
-					[[NXApp getGoView] setwhitesPrisoners:pris[1]];
-					[[NXApp getGoView] refreshIO];
+					[[NSApp getGoView] setblacksPrisoners:pris[0]];
+					[[NSApp getGoView] setwhitesPrisoners:pris[1]];
+					[[NSApp getGoView] refreshIO];
 					showboard(mesg.board);
       			}
     			}
       			break;
-    		case KIBITZ:{
-      			char s[300];
+                case KIBITZ:{
+                        char s[300];
       			sprintf(s, "%s: %s\n", mesg.kibitzer, mesg.kibitz);
-      			[NXApp SetIGSStatus:s];
-    			}
+      			[NSApp SetIGSStatus:s];
+                        }
       			break;
     		case STORED:
       			if (!strlen(mesg.text))
-					[NXApp SetIGSStatus:"No stored games\n"];
+					[NSApp SetIGSStatus:"No stored games\n"];
       			else
-					[NXApp SetIGSStatus:mesg.text];
+					[NSApp SetIGSStatus:mesg.text];
       			break;
     		case INFO:
       			if (strstr(mesg.text, "Removing")) {
@@ -382,29 +374,29 @@ void doserver(void)
 					setgame(-1);
 				}
       			if (strstr(mesg.text, "game completed")) {
-					[NXApp gameCompleted];
+					[NSApp gameCompleted];
 				}
-				[NXApp SetIGSStatus:mesg.text];
+				[NSApp SetIGSStatus:mesg.text];
       			break;
     		case PROMPT:
       			if (ingame != -1 && mesg.prompttype == 5) {
 					setgame(-1);
 					observing = 0;
-					[NXApp gameCompleted];
+					[NSApp gameCompleted];
       			}
 			case 0:
       			break;
     		default:
-      			[NXApp SetIGSStatus:mesg.text];
+      			[NSApp SetIGSStatus:mesg.text];
       			break;
    		}
   	idle = 1;
-      
-  if( [NXApp peekNextEvent: NX_MOUSEDOWNMASK into: &peek_ev] )
-    {
-      get_ev = [NXApp getNextEvent: NX_MOUSEDOWNMASK];
-      [NXApp sendEvent: get_ev];
-    }
+/*
+        if( [NSApp nextEventMatchingMask:NSLeftMouseDownMask untilDate:[NSDate distantFuture]inMode:NSEventTrackingRunLoopMode dequeue:NO] ) {
+            get_ev = [NSApp nextEventMatchingMask:NSLeftMouseDownMask untilDate:[NSDate distantFuture]inMode:NSEventTrackingRunLoopMode dequeue:YES];
+            [NSApp sendEvent:get_ev];
+        }
+*/
 }
 
 

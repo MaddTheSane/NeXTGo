@@ -1,25 +1,22 @@
 
-#import <appkit/appkit.h>
+#import <AppKit/AppKit.h>
 
 #import "GoServer.h"
-#import "MatrixScrollView.h"
 
-@interface Controller:Object
+@interface Controller:NSObject
 {
     id	GoApplication;
-	id	myGoServerList;
+    NSMutableDictionary *myGoServers;
     id	GoServerSelectionList;
     id	GoServerSelectionPanel;
-	id	GoServerName;
+    id	GoServerName;
     id	LoginDefinition;
     id	ServerLogin;
     id	ServerPassword;
     id	ServerPort;
-	BOOL panelIsInitialized;
 }
 
 - init;
-- initPanel;
 - openGoServer:sender;
 - connect:sender;
 - connectToServer:sender;

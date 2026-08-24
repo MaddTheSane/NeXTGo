@@ -6,10 +6,15 @@
 
 void main(int argc, char *argv[]) {
 
-    [GoApp new];
-    if ([NXApp loadNibSection:"NeXTGo.nib" owner:NXApp withNames:NO])
-	    [NXApp run];
+    NSAutoreleasePool *myPool = [[NSAutoreleasePool alloc] init];
+
+    [GoApp sharedApplication];
+    if ([NSBundle loadNibNamed:@"NeXTGo.nib" owner:NSApp])
+	    [NSApp run];
 	    
-    [NXApp free];
+    [NSApp release];
+
+    [myPool release];
+
     exit(0);
 }

@@ -1,7 +1,7 @@
 
-#import <appkit/appkit.h>
+#import <AppKit/AppKit.h>
 
-@interface GameInspectorPanel:Panel
+@interface GameInspectorPanel:NSPanel
 {
 	id 	ControlPanel;
 }

@@ -1,30 +1,31 @@
 #ifndef GoServer_h
 #define GoServer_h
 
-#import <appkit/appkit.h>
-#include <MiscString.h>
+#import <AppKit/AppKit.h>
 
-@interface GoServer:Object
+@interface GoServer:NSObject
 {
-	id	name;
+	NSString	*name;
 	int	port;
-	id	login;
-	id	password;
+        NSString	*login;
+        NSString	*password;
 }
 
++ (GoServer*)initFromPref:(int)i;
 - init;
-- initFromPref:(int)i;
-- saveToPref:(int)i;
-- removeFromPref:(int)i;
-- (const char*) name;
+//- (void)saveToPref:(int)i;
+//- (void)removeFromPref:(int)i;
+- (NSString *)serverName;
 - (int) port;
-- (const char*) login;
-- (const char*) password;
-- setServerName:(char *) aName;
+- (NSString*) login;
+- (NSString*) password;
+- setServerName:(NSString *) aName;
 - setPort:(int) aPort;
-- setLogin:(char *) aLogin;
-- setPassword:(char *) aPassword;
-- free;
+- setLogin:(NSString *) aLogin;
+- setPassword:(NSString *) aPassword;
+- (void)dealloc;
+- (GoServer*)initFromString:(NSString*)aString; 
+- (NSString*)dumpToString;
 
 @end
  

@@ -1,9 +1,12 @@
 #include "comment.header"
-
-/* $Id: Board.m,v 1.3 1997/07/06 19:37:55 ergo Exp $ */
+ 
+/* $Id: Board.m,v 1.4 1997/11/04 16:49:20 ergo Exp $ */
 
 /*
  * $Log: Board.m,v $
+ * Revision 1.4  1997/11/04 16:49:20  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:37:55  ergo
  * actual version
  *
@@ -21,14 +24,13 @@
 #import "Board.h"
 #import "gnugo.h"
 #include "igs.h"
-#include "MiscString.h"
 
 #import <libc.h>
 #import <math.h>
 #import <sys/time.h>
-#import <dpsclient/wraps.h>	// PSxxx functions
-#import <soundkit/Sound.h>
-#import <appkit/appkit.h>
+#import <AppKit/psopsOpenStep.h>	// PSxxx functions
+#import <SoundKit/Sound.h>
+#import <AppKit/AppKit.h>
 
 #define EMPTY		0
 #define WHITESTONE	1
@@ -54,8 +56,6 @@
 #define WINDOWOFFSETX 12.0
 #define WINDOWOFFSETY 12.0
   
-#define gameSize  bounds.size
-
 #define PSLine(a, b, x, y)	PSmoveto(a, b); PSlineto(x, y)
 
 float stoneX, stoneY;
@@ -69,36 +69,11 @@ void setStoneLoc(int x, int y)
   stoneY = BASEBOARDY - RADIUS + ((18 - y)*STONEHEIGHT) - ((19.0 - MAXY)/2.0)*STONEHEIGHT;
 }  
 
-void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
-	id obj  = (id)userdata;
-	TimeStruct*	ts = [obj ts];
-
-	char buf[256];
-	int myTime;
-	
-	if ([obj startZeit] == 0.0)
-		[obj setStartZeit:now];
-	myTime = ts->time - (now - [obj startZeit]);
-	if (myTime < 0) {
-		if (ts->byo == -1 || 		/* player is in first byo-yomi time */
-			ts->byo == 25) { 		/* player is in byo-yomi but did 	*/
-									/* not yet move */
-			myTime += [obj ByoTime] * 60;
-			ts->byo = 25;
-		}
-	}
-    sprintf(buf, "%d:%02d", myTime / 60, myTime % 60);
-    if (ts->byo != -1)
-		sprintf(buf, "%s, %d", buf, ts->byo);
-	[ts->timeToHandle setStringValue:buf];
-	[ts->timeToHandle display];
-}
-
 @implementation GoView
   
-- initFrame:(const NXRect *)frm
+- initWithFrame:(NSRect)frm
 {
-  NXSize stoneSize;
+  NSSize stoneSize;
   
   stoneSize.width = STONEWIDTH;
   stoneSize.height = STONEHEIGHT;
@@ -106,87 +81,88 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
   te = 0;
   startZeit = 0;
   
-  [super initFrame:frm];
+  [super initWithFrame:frm];
   
   [self allocateGState];	// For faster lock/unlockFocus
     
-  [(blackStone = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [blackStone useDrawMethod:@selector(drawBlackStone:) inObject:self];
-  [blackStone setSize:&stoneSize];
+  [(blackStone = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [blackStone addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawBlackStone:) delegate:self] autorelease]];
+  [blackStone setSize:stoneSize];
   
-  [(whiteStone = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [whiteStone useDrawMethod:@selector(drawWhiteStone:) inObject:self];
-  [whiteStone setSize:&stoneSize];
+  [(whiteStone = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [whiteStone addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawWhiteStone:) delegate:self] autorelease]];
+  [whiteStone setSize:stoneSize];
   
-  [(grayStone = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [grayStone useDrawMethod:@selector(drawGrayStone:) inObject:self];
-  [grayStone setSize:&stoneSize];
+  [(grayStone = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [grayStone addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawGrayStone:) delegate:self] autorelease]];
+  [grayStone setSize:stoneSize];
   
-  [(upperLeft = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [upperLeft useDrawMethod:@selector(drawUpperLeft:) inObject:self];
-  [upperLeft setSize:&stoneSize];
+  [(upperLeft = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [upperLeft addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawUpperLeft:) delegate:self] autorelease]];
+  [upperLeft setSize:stoneSize];
   
-  [(upperRight = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [upperRight useDrawMethod:@selector(drawUpperRight:) inObject:self];
-  [upperRight setSize:&stoneSize];
+  [(upperRight = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [upperRight addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawUpperRight:) delegate:self] autorelease]];
+  [upperRight setSize:stoneSize];
   
-  [(lowerLeft = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [lowerLeft useDrawMethod:@selector(drawLowerLeft:) inObject:self];
-  [lowerLeft setSize:&stoneSize];
+  [(lowerLeft = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [lowerLeft addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawLowerLeft:) delegate:self] autorelease]];
+  [lowerLeft setSize:stoneSize];
   
-  [(lowerRight = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [lowerRight useDrawMethod:@selector(drawLowerRight:) inObject:self];
-  [lowerRight setSize:&stoneSize];
+  [(lowerRight = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [lowerRight addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawLowerRight:) delegate:self] autorelease]];
+  [lowerRight setSize:stoneSize];
   
-  [(midLeft = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [midLeft useDrawMethod:@selector(drawMidLeft:) inObject:self];
-  [midLeft setSize:&stoneSize];
+  [(midLeft = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [midLeft addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawMidLeft:) delegate:self] autorelease]];
+  [midLeft setSize:stoneSize];
   
-  [(midRight = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [midRight useDrawMethod:@selector(drawMidRight:) inObject:self];
-  [midRight setSize:&stoneSize];
+  [(midRight = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [midRight addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawMidRight:) delegate:self] autorelease]];
+  [midRight setSize:stoneSize];
   
-  [(midTop = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [midTop useDrawMethod:@selector(drawMidTop:) inObject:self];
-  [midTop setSize:&stoneSize];
+  [(midTop = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [midTop addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawMidTop:) delegate:self] autorelease]];
+  [midTop setSize:stoneSize];
   
-  [(midBottom = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [midBottom useDrawMethod:@selector(drawMidBottom:) inObject:self];
-  [midBottom setSize:&stoneSize];
+  [(midBottom = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [midBottom addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawMidBottom:) delegate:self] autorelease]];
+  [midBottom setSize:stoneSize];
   
-  [(innerSquare = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [innerSquare useDrawMethod:@selector(drawInnerSquare:) inObject:self];
-  [innerSquare setSize:&stoneSize];
+  [(innerSquare = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [innerSquare addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawInnerSquare:) delegate:self] autorelease]];
+  [innerSquare setSize:stoneSize];
   
-  [(innerHandicap = [[NXImage allocFromZone:[self zone]] init]) setScalable:NO];
-  [innerHandicap useDrawMethod:@selector(drawInnerHandicap:) inObject:self];
-  [innerHandicap setSize:&stoneSize];
+  [(innerHandicap = [[NSImage allocWithZone:[self zone]] init]) setScalesWhenResized:NO];
+  [innerHandicap addRepresentation:[[[NSCustomImageRep alloc] initWithDrawSelector:@selector(drawInnerHandicap:) delegate:self] autorelease]];
+  [innerHandicap setSize:stoneSize];
   
-  [self setBackgroundFile:NXGetDefaultValue([NXApp appName], "BackGround") 
+  [self setBackgroundFile:[[[NSUserDefaults standardUserDefaults] objectForKey:@"BackGround"] cString] 
  andRemember:NO];
   
   [self startNewGame];
 
-  historyFont = [Font newFont:"Helvetica" size:9.0 matrix:NX_IDENTITYMATRIX];
-  blackTerrFont = [Font newFont:"Helvetica" size:25.0 matrix:NX_IDENTITYMATRIX];
-  whiteTerrFont = [Font newFont:"Helvetica" size:22.5 matrix:NX_IDENTITYMATRIX];
-  stoneClick = [Sound findSoundFor:"Pop"];
-  
-	{
-		struct timeval tp;
-    	struct timezone tzp;
-	    gettimeofday(&tp, &tzp);
-		time = tp.tv_sec;
-	}
+  historyFont = [ [NSFont fontWithName:@"Helvetica" size:9.0] retain];
+  blackTerrFont = [ [NSFont fontWithName:@"Helvetica" size:25.0] retain];
+  whiteTerrFont = [ [NSFont fontWithName:@"Helvetica" size:22.5] retain];
+#warning
+  stoneClick = [Sound findSoundFor:@"Pop"];
+
+  {
+      struct timeval tp;
+      struct timezone tzp;
+      gettimeofday(&tp, &tzp);
+      time = tp.tv_sec;
+  }
   return self;
 }
 
 // free simply gets rid of everything we created for MainGoView, including
   // the instance of MainGoView itself. This is how nice objects clean up.
   
-- free {
-	[backGround free];
-	return [super free];
+- (void)dealloc {
+	[backGround release];
+	{ [super dealloc]; return; };
 }
 
 
@@ -196,22 +172,24 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
   // remember to YES if you wish the write the value out in the defaults.
   
 - setBackgroundFile:(const char *)fileName andRemember:(BOOL)remember {
-	[backGround free];
-	backGround = [[NXImage allocFromZone:[self zone]] initSize:&gameSize];
-	if (fileName) {
-    	[backGround useFromFile:fileName];
+    [backGround release];
+    if (fileName) {
+        backGround = [NSImage alloc];
+        [backGround initWithContentsOfFile:[NSString stringWithCString:fileName]];
+        [backGround setSize:[self bounds].size];
     	if (remember) 
-      		NXWriteDefault ([NXApp appName], "Background", fileName);
-  	} else {
-    	[backGround useFromSection:"Background.tiff"];
+      		[[NSUserDefaults standardUserDefaults] setObject:[NSString stringWithCString:fileName] forKey:@"Background"];
+    } else {
+        backGround = [ [NSImage imageNamed:@"Background.tiff"] retain];
+        [backGround setSize:[self bounds].size];
     	if (remember)
-      		NXRemoveDefault ([NXApp appName], "Background");
-  	}
-	[backGround setBackgroundColor:NX_COLORWHITE];
-	[backGround setScalable:NO];
-	[self display];
-  
-	return self;   
+      		[[NSUserDefaults standardUserDefaults] removeObjectForKey:@"Background"];
+    }
+    [backGround setBackgroundColor:[NSColor whiteColor]];
+    [backGround setScalesWhenResized:NO];
+    [self display];
+
+    return self;   
 }
 
 // The following two methods allow changing the background image from
@@ -219,10 +197,13 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
   
 - changeBackground:sender {
 	
-	const char *const types[] = {"tiff", "eps", NULL};  
-  
-	if ([[OpenPanel new] runModalForTypes:types]) {
-		[self setBackgroundFile:[[OpenPanel new] filename] andRemember:YES];
+    NSString *fileType1 = @"tiff",
+             *fileType2 = @"eps";
+
+    id fileTypes = [NSArray arrayWithObjects:fileType1, fileType2, nil];
+
+	if ([[NSOpenPanel new] runModalForTypes:fileTypes]) {
+		[self setBackgroundFile:[[[NSOpenPanel new] filename] cString] andRemember:YES];
 		[self display];
 	}
   
@@ -240,27 +221,27 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
 {
   if (SmartGoGameFlag)
     {
-      [startButton setEnabled: NO];
-      [stopButton setEnabled: NO];
-      [passButton setEnabled: NO];
+      [startButton setEnabled:NO];
+      [stopButton setEnabled:NO];
+      [passButton setEnabled:NO];
 
       return self;
     }
     
  if (bothSides)
-    [passButton setEnabled: NO];
+    [passButton setEnabled:NO];
   else
-    [passButton setEnabled: YES];
+    [passButton setEnabled:YES];
  
   if (neitherSide)
     {
-      [startButton setEnabled: NO];
-      [stopButton setEnabled: NO];
+      [startButton setEnabled:NO];
+      [stopButton setEnabled:NO];
     }
   else
     {
-      [startButton setEnabled: YES];
-      [stopButton setEnabled: YES];
+      [startButton setEnabled:YES];
+      [stopButton setEnabled:YES];
     }
 
   return self;
@@ -293,42 +274,42 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
 
 
   	if (gameType == LOCAL) {
-		sethand(handicap);
-      	currentStone = (handicap == 0)?BLACKSTONE:WHITESTONE;
-      	opposingStone = (currentStone == BLACKSTONE)?WHITESTONE:BLACKSTONE;
-  
-      	if (currentStone == BLACKSTONE)
-			[gameMessage setStringValue:"Black's Turn"];
-      	else
-			[gameMessage setStringValue:"White's Turn"];
+            sethand(handicap);
+            currentStone = (handicap == 0)?BLACKSTONE:WHITESTONE;
+            opposingStone = (currentStone == BLACKSTONE)?WHITESTONE:BLACKSTONE;
 
-      	[self resetButtons];
-  
-      	if (((currentStone == BLACKSTONE) && (blackSide == 1)) ||
-	  		((currentStone == WHITESTONE) && (whiteSide == 1)))  
-			[gameMessage2 setStringValue:"Press START to begin..."];
-      	else
-			[gameMessage2 setStringValue:"You move first..."];
-    }
+            if (currentStone == BLACKSTONE)
+                [gameMessage setStringValue:@"Black's Turn"];
+            else
+                [gameMessage setStringValue:@"White's Turn"];
+
+            [self resetButtons];
+
+            if (((currentStone == BLACKSTONE) && blackSide) ||
+	  		((currentStone == WHITESTONE) && whiteSide))
+                [gameMessage2 setStringValue:@"Press START to begin..."];
+            else
+                [gameMessage2 setStringValue:@"You move first..."];
+        }
   	else {
-		[gameMessage2 setStringValue:"Internet Go Server"];
-      	[gameMessage setStringValue:""];
-      	[self setblacksPrisoners:0];
-      	[self setwhitesPrisoners:0];
-      	[passButton setEnabled: YES];
-      	[startButton setEnabled: NO];
-      	[stopButton setEnabled: NO];
-		[self removeTE];
-		{
-			struct timeval tp;
+            [gameMessage2 setStringValue:@"Internet Go Server"];
+            [gameMessage setStringValue:@""];
+            [self setblacksPrisoners:0];
+            [self setwhitesPrisoners:0];
+            [passButton setEnabled:YES];
+            [startButton setEnabled:NO];
+            [stopButton setEnabled:NO];
+            [self removeTE];
+            {
+                struct timeval tp;
     		struct timezone tzp;
     		gettimeofday(&tp, &tzp);
-			time = tp.tv_sec;
-		}	
+                time = tp.tv_sec;
+            }	
 	}
     
   	[ScoringWindow close];
-  	NXPing();
+  	PSWait();
     
   	return self;
 }
@@ -370,7 +351,7 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
 
       gameScored = YES;
       [self displayScoringInfo];
-      NXPing();
+      PSWait();
     }
 
   if ((gameRunning == 0) && (finished == 0)) {
@@ -380,13 +361,12 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
   return 0;
 }
 
-- stop:sender {
+- (void)stop:(id)sender {
 	if (gameType == IGSGAME)
-		return self;
+		return;
       
 	if (gameRunning) 
 		gameRunning = NO;
-	return self;
 }
 
 - showLastMove:sender
@@ -398,15 +378,15 @@ void TEHandler(DPSTimedEntry teNumber, double now, void* userdata) {
 
   if (finished)
     {
-      NXRunAlertPanel("NeXTGo", "The game has concluded.  The last move was\n\
-the scoring.", "OK", 0, 0);
+      NSRunAlertPanel(@"NeXTGo", @"The game has concluded.  The last move was\n\
+the scoring.", @"OK", nil, nil);
 
       return self;
     }
 
   if (lastMove == 0)
     {
-      NXRunAlertPanel("NeXTGo", "The game has not yet started.", "OK", 0, 0);
+      NSRunAlertPanel(@"NeXTGo", @"The game has not yet started.", @"OK", nil, nil);
 
       return self;
     }
@@ -415,7 +395,7 @@ the scoring.", "OK", 0, 0);
     {
       if (gameMoves[lastMove-1].changes[i].x < 0)
 	{
-	  NXRunAlertPanel("NeXTGo", "The last move was a pass.", "OK", 0, 0);
+	  NSRunAlertPanel(@"NeXTGo", @"The last move was a pass.", @"OK", nil, nil);
 
 	  return self;
 	}
@@ -432,14 +412,14 @@ the scoring.", "OK", 0, 0);
 	}
     }
   [self unlockFocus];
-  NXPing();
+  PSWait();
   
   [self lockFocus];
   [[self window] flushWindow];
-  [self drawSelf:&bounds :0];
+  [self drawRect:[self bounds]];
   [self display];
   [self unlockFocus];
-  NXPing();
+  PSWait();
   
   return self;
 }
@@ -489,85 +469,77 @@ the scoring.", "OK", 0, 0);
 
       if (gameType == LOCAL)
 	{
-	  [gameMessage setStringValue:(currentStone == BLACKSTONE)?
-	   "Black's Turn":"White's Turn"];
+	  [gameMessage setStringValue:(currentStone == BLACKSTONE) ? @"Black's Turn" : @"White's Turn"];
 	  
 	  if ((bothSides) || (((currentStone == BLACKSTONE) && (blackSide)) ||
 			      ((currentStone == WHITESTONE) && (whiteSide))))
 	    {
-	      [gameMessage2 setStringValue:"Press START to continue..."];
+	      [gameMessage2 setStringValue:@"Press START to continue..."];
 	      gameRunning = 0;
 	    }
 	  else
-	    [gameMessage2 setStringValue:"Your move..."];
+	    [gameMessage2 setStringValue:@"Your move..."];
 	}
     }
 
   return self;
 }
 
-- undoLastMove:sender
-{
-  if (SmartGoGameFlag)
+- undoLastMove:sender {
+    if (SmartGoGameFlag)
+        return self;
+
+    if (gameType == LOCAL) {
+        [self undo];
+    }
+    else {
+        sendstr("undo\n");
+    }
+
     return self;
+}
 
-  if (gameType == LOCAL)
-    {
-      [self undo];
-    }
-  else
-    {
-      sendstr("undo\n");
-    }
+- toggleShowHistFlag:sender {
+    [self lockFocus];
+    [self display];
+    [self unlockFocus];
+
+    return self;
+}
+
+- toggleSound:sender {
 
   return self;
 }
 
-- toggleShowHistFlag:sender
-{
-  [self lockFocus];
-  [self display];
-  [self unlockFocus];
+- doClick {
+    if ([playSounds intValue])
+        [stoneClick play];
+    PSWait();
 
-  return self;
+    return self;
 }
 
-- toggleSound:sender
-{
+- toggleCoords:sender {
+    [self lockFocus];
+    [self display];
+    [self unlockFocus];
 
-  return self;
+    return self;
 }
 
-- doClick
+- (void)mouseDown:(NSEvent *)event 
 {
-  if ([playSounds intValue])
-    [stoneClick play];
-  NXPing();
-
-  return self;
-}
-
-- toggleCoords:sender
-{
-  [self lockFocus];
-  [self display];
-  [self unlockFocus];
-
-  return self;
-}
-
-- mouseDown:(NXEvent *)event
-{
-  	NXPoint pickedP;
+  	NSPoint pickedP;
 
 	if (gameType == LOCAL) {
-      	if ((((currentStone == BLACKSTONE) && (blackSide == 1)) ||
-	   		((currentStone == WHITESTONE) && (whiteSide == 1))) &&
+      	if ((((currentStone == BLACKSTONE) && blackSide) ||
+	   		((currentStone == WHITESTONE) && whiteSide)) &&
 	  		(!scoringGame) && (!manualScoring))
-			return self;
+			return;
 
       	if (SmartGoGameFlag)
-			return self;
+			return;
     
       	if ((!gameRunning) && (!finished))
 			gameRunning = YES;
@@ -575,7 +547,7 @@ the scoring.", "OK", 0, 0);
       	if (!finished) {
 			int i, j, x, y;
 
-			pickedP = event->location;
+			pickedP = [event locationInWindow];
     
 			x = floor((pickedP.x - ((19.0 - MAXX)/2.0)*STONEWIDTH - BASEBOARDX 	
 								  - WINDOWOFFSETX + RADIUS)/STONEWIDTH);
@@ -613,31 +585,31 @@ the scoring.", "OK", 0, 0);
 	    		}
 	  			[self unlockFocus];
 
-	  			[self doClick];
+// commented out because of double clicks	  			[self doClick];
 
 		  		[self updateInfo];
 
 		  		[self addMoveToGameMoves: currentStone: x: y];
 
 		  		if ([showHistFlag intValue]) {
-		      		NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+		      		NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 							{floor(STONEWIDTH), floor(STONEHEIGHT)}};
 
 	      			[self lockFocus];
-	      			[self drawSelf:&tmpRect :0];
+	      			[self drawRect:tmpRect];
 	      			[self unlockFocus];
 	    		}
 
 	  			if (!neitherSide)
 	    			[self step];
-      			[self update];
+                                [self setNeedsDisplay:YES];
 			} 
 		} 
 		else {
 			if ((scoringGame) && (manualScoring) && (!gameScored)) {
 	    	int x, y;
 
-	    	pickedP = event->location;
+	    	pickedP = [event locationInWindow];
     
 	    	x = floor((pickedP.x - ((19.0 - MAXX)/2.0)*STONEWIDTH - BASEBOARDX
 		       - WINDOWOFFSETX + RADIUS)/STONEWIDTH);
@@ -650,41 +622,39 @@ the scoring.", "OK", 0, 0);
 	    	if (y > MAXY - 1) y = MAXY - 1;
 
 	    	if (p[x][y] != EMPTY) {
-				int k, l;
+                    int k, l;
 
-				currentStone = p[x][y];
+                    currentStone = p[x][y];
 
-				find_pattern_in_board(x, y);
-				for (k = 0; k < MAXX; k++)
-		  			for (l = 0; l < MAXY; l++)
-		    			if (patternmat[k][l]) {
-							p[k][l] = EMPTY;
-							if (currentStone == BLACKSTONE)
-			  					blackCaptured++;
-							else
-			  					whiteCaptured++;
-		      			}
+                    find_pattern_in_board(x, y);
+                    for (k = 0; k < MAXX; k++)
+                        for (l = 0; l < MAXY; l++)
+                            if (patternmat[k][l]) {
+                                p[k][l] = EMPTY;
+                                if (currentStone == BLACKSTONE)
+                                    blackCaptured++;
+                                else
+                                    whiteCaptured++;
+                            }
 		
-				[self setblacksPrisoners:blackCaptured];
-				[self setwhitesPrisoners:whiteCaptured];
+                    [self setblacksPrisoners:blackCaptured];
+                    [self setwhitesPrisoners:whiteCaptured];
 
-				[self update];
-	      	}
-	  		}
-  		}
+                    [self setNeedsDisplay:YES];
+                }
+            }
   	}
-  	else {
-      	int x, y;
+    }
+    else {
+        int x, y;
       	char s[50], n[50];
       	extern int observing, ingame;
 
       	if (observing || (ingame == -1)) {
-	  		NXRunAlertPanel("IGS Error", "You cannot make a move unless you are playing.", "OK", 0, 0);
+            NSRunAlertPanel(@"IGS Error", @"You cannot make a move unless you are playing.", @"OK", nil, nil);		  		return;
+	}
 
-	  		return self;
-		}
-
-      	pickedP = event->location;
+      	pickedP = [event locationInWindow];
     
       	x = floor((pickedP.x - ((19.0 - MAXX)/2.0)*STONEWIDTH - BASEBOARDX -
 		 	WINDOWOFFSETX + RADIUS)/STONEWIDTH);
@@ -692,129 +662,125 @@ the scoring.", "OK", 0, 0);
 		      ((19.0 - MAXY)/2.0)*STONEHEIGHT)/STONEHEIGHT);
 
       	if (x < 0) x = 0;
-      	if (x > MAXX - 1) x = MAXX - 1;
+      	if (x > MAXX - 1)
+            x = MAXX - 1;
       	if (y < 0) y = 0;
-      	if (y > MAXY - 1) y = MAXY - 1;
+      	if (y > MAXY - 1)
+            y = MAXY - 1;
 
       	s[0] = x + 'a';
       	if (x > 7)
-        	s[0] = x + 'b';
+            s[0] = x + 'b';
       	s[1] = 0;
       	sprintf(n, "%d", MAXY-y);
       	strcat(s, n);
-		{
-			struct timeval tp;
-    		struct timezone tzp;
-	    	gettimeofday(&tp, &tzp);
-			time = tp.tv_sec - time;
-		
-		}
+	{
+            struct timeval tp;
+            struct timezone tzp;
+            gettimeofday(&tp, &tzp);
+            time = tp.tv_sec - time;
+        }
 
- 		sprintf(n, " %d", ingame); 	
+        sprintf(n, " %d", ingame); 	
       	strcat(s, n);
- 
-		sprintf(n, " %ld", time); 	
+
+        sprintf(n, " %ld", time); 	
       	strcat(s, n);
       	strcat(s, "\n");
       	sendstr(s);
     }
-
-  return self;
 }
 
 
-- passMove
-{
-	if (gameType == LOCAL) {
-		if (((currentStone == BLACKSTONE) && (blackSide == 1)) ||
-	  		((currentStone == WHITESTONE) && (whiteSide == 1))) {
-			return self;
-		}
-		if (currentStone == BLACKSTONE) {
-	  		blackPassed = 1;
-	  		if (AGAScoring) blackCaptured++;
-		}
+- passMove {
+    if (gameType == LOCAL) {
+        if (((currentStone == BLACKSTONE) && blackSide) ||
+            ((currentStone == WHITESTONE) && whiteSide)) {
+            return self;
+        }
+        if (currentStone == BLACKSTONE) {
+            blackPassed = 1;
+            if (AGAScoring) blackCaptured++;
+        }
       	else {
-	  		whitePassed = 1;
-	  		if (AGAScoring) whiteCaptured++;
-		}
+            whitePassed = 1;
+            if (AGAScoring) whiteCaptured++;
+        }
 
       	[self updateInfo];
 
       	[self addMoveToGameMoves: currentStone: -1: -1];
     
       	if ((!neitherSide) && (!finished))
-		[self step];
+            [self step];
     }
-  	else {
-		sendstr("pass\n");
+    else {
+        sendstr("pass\n");
     }
     
   return self;
 }
 
-- refreshIO
-{
-  [self setblacksPrisoners:blackCaptured];
-  [self setwhitesPrisoners:whiteCaptured];
-  
-  [self lockFocus];
-  [[self window] flushWindow];
-  [self drawSelf:&bounds :0];
-  [self display];
-  [self unlockFocus];
-  
-  NXPing();
+- refreshIO {
+    [self setblacksPrisoners:blackCaptured];
+    [self setwhitesPrisoners:whiteCaptured];
 
-  return self;
+    [self lockFocus];
+    [[self window] flushWindow];
+    [self drawRect:[self bounds]];
+    [self display];
+    [self unlockFocus];
+
+    PSWait();
+
+    return self;
 }
 
-- addMoveToGameMoves: (int)color: (int)x: (int)y
-{
-	int i, j, k, numchanges;
+- addMoveToGameMoves: (int)color: (int)x: (int)y {
+    int i, j, k, numchanges;
 
-  	numchanges = 0;
-  	for (i = 0; i < MAXX; i++)
-    	for (j = 0; j < MAXY; j++)
-      		if (p[i][j] != oldBoard[i][j])
-				numchanges++;
-  	if (x < 0 || y < 0)
-		numchanges++;
-  	gameMoves[lastMove].numchanges = numchanges;
-  	gameMoves[lastMove].changes = (struct change *)
-    	malloc((size_t)sizeof(struct change)*numchanges);
-  	k = 0;
-  	if (x < 0 || y < 0) {
-      	gameMoves[lastMove].changes[0].added = NO;
+    numchanges = 0;
+    for (i = 0; i < MAXX; i++)
+        for (j = 0; j < MAXY; j++)
+            if (p[i][j] != oldBoard[i][j])
+                numchanges++;
+    if (x < 0 || y < 0)
+        numchanges++;
+    gameMoves[lastMove].numchanges = numchanges;
+    gameMoves[lastMove].changes = (struct change *)
+        malloc((size_t)sizeof(struct change)*numchanges);
+    k = 0;
+    if (x < 0 || y < 0) {
+        gameMoves[lastMove].changes[0].added = NO;
       	gameMoves[lastMove].changes[0].x = x;
-		gameMoves[lastMove].changes[0].y = y;
-		gameMoves[lastMove].changes[0].color = color;
+        gameMoves[lastMove].changes[0].y = y;
+        gameMoves[lastMove].changes[0].color = color;
       	k++;
     }
-  	for (i = 0; i < MAXX; i++)
-    	for (j = 0; j < MAXY; j++)
-      		if (p[i][j] != oldBoard[i][j]) {
-	  			gameMoves[lastMove].changes[k].x = i;
-	  			gameMoves[lastMove].changes[k].y = j;
-	  			if (p[i][j] != EMPTY) {
-	      			gameMoves[lastMove].changes[k].added = YES;
-	      			gameMoves[lastMove].changes[k].color = p[i][j];
-	    		}
-	  			else {
-	      			gameMoves[lastMove].changes[k].added = NO;
-	      			gameMoves[lastMove].changes[k].color = oldBoard[i][j];
-				}
-	  			k++;
-			}
-  	gameMoves[lastMove].blackCaptured = blackCaptured;
-  	gameMoves[lastMove].whiteCaptured = whiteCaptured;
+    for (i = 0; i < MAXX; i++)
+        for (j = 0; j < MAXY; j++)
+            if (p[i][j] != oldBoard[i][j]) {
+                gameMoves[lastMove].changes[k].x = i;
+                gameMoves[lastMove].changes[k].y = j;
+                if (p[i][j] != EMPTY) {
+                    gameMoves[lastMove].changes[k].added = YES;
+                    gameMoves[lastMove].changes[k].color = p[i][j];
+                }
+                else {
+                    gameMoves[lastMove].changes[k].added = NO;
+                    gameMoves[lastMove].changes[k].color = oldBoard[i][j];
+                }
+                k++;
+            }
+    gameMoves[lastMove].blackCaptured = blackCaptured;
+    gameMoves[lastMove].whiteCaptured = whiteCaptured;
 
-  	lastMove++;
+    lastMove++;
 
-  	if (x >= 0)
-		hist[x][y] = lastMove;
+    if (x >= 0)
+        hist[x][y] = lastMove;
 
-  	return self;
+    return self;
 }
 
 - makeMove: (int)color: (int)x: (int)y {
@@ -845,8 +811,6 @@ the scoring.", "OK", 0, 0);
         }
       	[self unlockFocus];
 
-      	[self doClick];
-
       	oldblacksPrisoners = blackCaptured;
       	oldwhitesPrisoners = whiteCaptured;
       
@@ -864,49 +828,48 @@ the scoring.", "OK", 0, 0);
 		}
 
       	if ([showHistFlag intValue]) {
-          	NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+          	NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 	    		      {floor(STONEWIDTH), floor(STONEHEIGHT)}};
 
           	[self lockFocus];
-          	[self drawSelf:&tmpRect :0];
+          	[self drawRect:tmpRect];
           	[self display];
 			[self unlockFocus];
 		}
 		
 		if (blackPassed) {
 			blackPassed = 0;
-			[gameMessage2 setStringValue:""];
+			[gameMessage2 setStringValue:@""];
 		}
 		
 		if (whitePassed) {
 			whitePassed = 0;
-			[gameMessage2 setStringValue:""];
+			[gameMessage2 setStringValue:@""];
 		}
 	}
 	[self addMoveToGameMoves: color: x: y];
 	
-	[gameMessage setStringValue:(opposingStone == BLACKSTONE)?"Black's Turn":
-       "White's Turn"];
+	[gameMessage setStringValue:(opposingStone == BLACKSTONE) ? @"Black's Turn" : @"White's Turn"];
 	
 	if ((-1 == x) && (-1 == y)) {		/* opponent has passed */
 		if (currentStone == BLACKSTONE) {
 			blackPassed = 1;
-    		[gameMessage2 setStringValue:"Black has passed."];
+    		[gameMessage2 setStringValue:@"Black has passed."];
 		}
 		else {
  			whitePassed = 1;
-    		[gameMessage2 setStringValue:"White has passed."];
+    		[gameMessage2 setStringValue:@"White has passed."];
 		}
     }
-	{
-		struct timeval tp;
+    {
+	struct timeval tp;
     	struct timezone tzp;
     	gettimeofday(&tp, &tzp);
 		time = tp.tv_sec;
-	}	
-	[self doClick];
-	[self update];
-	return self;
+    }	
+    [self doClick];
+    [self setNeedsDisplay:YES];
+    return self;
 }
 
 - makeMoveSilent: (int)color: (int)x: (int)y
@@ -932,38 +895,34 @@ the scoring.", "OK", 0, 0);
   return self;
 }
 
-- setTimeAndByo: (int)btime: (int)bbyo: (int)wtime: (int)wbyo
-{
-	ts.caller = self;
-	if (bTime != -1) {
-		if (bTime < 0)
-			bTime = 0;
-		if (wTime < 0)
-			wTime = 0;
-		if (currentStone == WHITESTONE) {		/* Black moved */
-			[self removeTE];
-			startZeit = 0.0;
-			ts.byo = bbyo;
-			ts.time = btime;
-			ts.timeToHandle = blackTime;
-			te = DPSAddTimedEntry(0.2, TEHandler, (void*)self,
-								   NX_BASETHRESHOLD);
-		} 
-		else {						/* White moved */
-			[self removeTE];
-			startZeit = 0.0;
-			ts.byo = wbyo;
-			ts.time = wtime;
-			ts.timeToHandle = whiteTime;
-			te = DPSAddTimedEntry(0.2, TEHandler, (void*)self,
-								   NX_BASETHRESHOLD);
-		}
-		bTime = btime;
-		bByo = bbyo;
-		wTime = wtime;
-		wByo = wbyo;
+- setTimeAndByo: (int)btime: (int)bbyo: (int)wtime: (int)wbyo {
+#ifdef DEBUG
+    printf("setTimeAndByo: BlackTime = %d, BlackByo = %d, WhitTime = %d, Whitebyo = %d\n", btime, bbyo, wtime, wbyo);
+#endif
+    if (bTime != -1) {
+        if (bTime < 0)
+            bTime = 0;
+        if (wTime < 0)
+            wTime = 0;
+        [self removeTE];
+        startZeit = 0;
+        if (currentStone == WHITESTONE) {		/* Black moved */
+            ts.byo = bbyo;
+            ts.time = btime;
+            ts.timeToHandle = blackTime;
+        }
+        else {						/* White moved */
+            ts.byo = wbyo;
+            ts.time = wtime;
+            ts.timeToHandle = whiteTime;
 	}
-	return self;
+        te = [[NSTimer scheduledTimerWithTimeInterval:0.2 target:self selector:@selector(TEHandler:) userInfo:self repeats:YES] retain];
+        bTime = btime;
+        bByo = bbyo;
+        wTime = wtime;
+        wByo = wbyo;
+    }
+    return self;
 }
 
 - dispTime
@@ -976,9 +935,9 @@ the scoring.", "OK", 0, 0);
     sprintf(whtime, "%d:%02d", wTime / 60, wTime % 60);
     if (wByo != -1)
 		sprintf(whtime, "%s, %d", whtime, wByo);
-	[blackTime setStringValue:bltime];
+	[blackTime setStringValue:[NSString stringWithCString:bltime]];
 	[blackTime display];
-	[whiteTime setStringValue:whtime];
+	[whiteTime setStringValue:[NSString stringWithCString:whtime]];
 	[whiteTime display];
 	return self;
 }
@@ -992,18 +951,17 @@ the scoring.", "OK", 0, 0);
 }
 
 - updateTitle {
-	id buf = [ [MiscString alloc] initString:[IGSBlackPlayer stringValue]];
-	[buf cat:" - "];
-	[buf cat:[IGSWhitePlayer stringValue]];
-	[[self window] setTitle:[buf stringValue]];
-	[buf free];
+    id buf = [ NSString stringWithString:[IGSBlackPlayer stringValue]];
+    buf = [buf stringByAppendingString:[NSString stringWithString:@" - "] ];
+    buf = [buf stringByAppendingString:[IGSWhitePlayer stringValue]];
+    [[self window] setTitle:buf];
 	
-	return self;	
+    return self;	
 }
 
 - setWhiteName: (char *)wname {
 	
-	[IGSWhitePlayer setStringValue:wname];
+	[IGSWhitePlayer setStringValue:[NSString stringWithCString:wname]];
 	[IGSWhitePlayer display];
 	[self updateTitle];
 
@@ -1012,7 +970,7 @@ the scoring.", "OK", 0, 0);
 
 - setBlackName: (char *)bname {
 
-	[IGSBlackPlayer setStringValue:bname];
+	[IGSBlackPlayer setStringValue:[NSString stringWithCString:bname]];
 	[IGSBlackPlayer display];
 	[self updateTitle];
 
@@ -1029,7 +987,7 @@ the scoring.", "OK", 0, 0);
 
 - setIGSKomi: (char *)k
 {
-  [IGSkomi setStringValue:k];
+  [IGSkomi setStringValue:[NSString stringWithCString:k]];
   [IGSkomi display];
 
   return self;
@@ -1045,94 +1003,91 @@ the scoring.", "OK", 0, 0);
 	return ByoTime;
 }
 
-- updateInfo
-{
-  int oldblacksPrisoners, oldwhitesPrisoners, i, j;
-  
-  if (finished && gameScored && resultsDisplayed)
-    {
-      [startButton setEnabled: NO];
-      [stopButton setEnabled: NO];
-      [passButton setEnabled: NO];
-      return self;
-    }
-  
-  oldblacksPrisoners = blackCaptured;
-  oldwhitesPrisoners = whiteCaptured;
-      
-  examboard(opposingStone);
-  
-  	if (currentStone == BLACKSTONE) {
-  		opposingStone = BLACKSTONE;
-    	currentStone = WHITESTONE;
-    	[gameMessage setStringValue:"White's Turn"];
-  	} else {
-    	opposingStone = WHITESTONE;
-    	currentStone = BLACKSTONE;
-    	[gameMessage setStringValue:"Black's Turn"];
-  	}
-  
-	[self setblacksPrisoners:blackCaptured];
-	[self setwhitesPrisoners:whiteCaptured];
-  
-	if (((oldblacksPrisoners != blackCaptured) ||
-      	(oldwhitesPrisoners != whiteCaptured))) {
-      	[self lockFocus];
-      	for (i = 0; i < MAXX; i++)
-			for (j = 0; j < MAXX; j++)
-	  			if ((oldBoard[i][j] != EMPTY) && (p[i][j] == EMPTY)) {
-	      			setStoneLoc(i, j);
-	      			[self eraseStone];
-	      			[self showBackgroundPiece: i: j];
-	    		}
-    	[self unlockFocus];
-  	}
+- updateInfo {
+    int oldblacksPrisoners, oldwhitesPrisoners, i, j;
 
-  if ([showHistFlag intValue])
-    {
-      NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+    if (finished && gameScored && resultsDisplayed) {
+        [startButton setEnabled:NO];
+        [stopButton setEnabled:NO];
+        [passButton setEnabled:NO];
+        return self;
+    }
+
+    oldblacksPrisoners = blackCaptured;
+    oldwhitesPrisoners = whiteCaptured;
+
+    examboard(opposingStone);
+
+    if (currentStone == BLACKSTONE) {
+        opposingStone = BLACKSTONE;
+    	currentStone = WHITESTONE;
+    	[gameMessage setStringValue:@"White's Turn"];
+    }
+    else {
+        opposingStone = WHITESTONE;
+    	currentStone = BLACKSTONE;
+    	[gameMessage setStringValue:@"Black's Turn"];
+    }
+
+    [self setblacksPrisoners:blackCaptured];
+    [self setwhitesPrisoners:whiteCaptured];
+
+    if (((oldblacksPrisoners != blackCaptured) ||
+         (oldwhitesPrisoners != whiteCaptured))) {
+        [self lockFocus];
+      	for (i = 0; i < MAXX; i++)
+            for (j = 0; j < MAXX; j++)
+                if ((oldBoard[i][j] != EMPTY) && (p[i][j] == EMPTY)) {
+                    setStoneLoc(i, j);
+                    [self eraseStone];
+                    [self showBackgroundPiece: i: j];
+                }
+        [self unlockFocus];
+    }
+
+    if ([showHistFlag intValue]) {
+        NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 			  {floor(STONEWIDTH), floor(STONEHEIGHT)}};
 
-      [self lockFocus];
-      [self drawSelf:&tmpRect :0];
-      [self display];
-      [self unlockFocus];
+        [self lockFocus];
+        [self drawRect:tmpRect];
+        [self display];
+        [self unlockFocus];
     }
-  
-  if ((blackPassed) && (opposingStone == BLACKSTONE))
-    [gameMessage2 setStringValue:"Black has passed."];
-    
-  if ((whitePassed) && (opposingStone == WHITESTONE))
-    [gameMessage2 setStringValue:"White has passed."];
-    
-  if ((!blackPassed) && (!whitePassed))
-    [gameMessage2 setStringValue:""];
-  
-  if ((blackPassed) && (whitePassed) && (!manualScoring) && (!gameScored))
-    {
-      [self lockFocus];
-      [[self window] flushWindow];
-      [gameMessage setStringValue:"Scoring Game, Please Wait"];
-      [gameMessage2 setStringValue:"Removing Dead Groups..."];
-      [self display];
-      [self unlockFocus];
-      finished = 1;
-      score_game();
+
+    if ((blackPassed) && (opposingStone == BLACKSTONE))
+        [gameMessage2 setStringValue:@"Black has passed."];
+
+    if ((whitePassed) && (opposingStone == WHITESTONE))
+        [gameMessage2 setStringValue:@"White has passed."];
+
+    if ((!blackPassed) && (!whitePassed))
+        [gameMessage2 setStringValue:@""];
+
+    if ((blackPassed) && (whitePassed) && (!manualScoring) && (!gameScored)) {
+        [self lockFocus];
+        [[self window] flushWindow];
+        [gameMessage setStringValue:@"Scoring Game, Please Wait"];
+        [gameMessage2 setStringValue:@"Removing Dead Groups..."];
+        [self display];
+        [self unlockFocus];
+        finished = 1;
+        score_game();
 //      [self scoreGame];
-      manualScoring = 1;
+        manualScoring = 1;
     }
-  if ((blackPassed) && (whitePassed) && (manualScoring) && (!gameScored))
-    {
-      [self lockFocus];
-      [[self window] flushWindow];
-      [gameMessage setStringValue:"Please remove dead groups"];
-      [gameMessage2 setStringValue:"When finished, press Start..."];
-      [self display];
-      [self unlockFocus];
-      [passButton setEnabled:NO];
-      [stopButton setEnabled:NO];
-      finished = 1;
-      scoringGame = YES;
+    
+    if ((blackPassed) && (whitePassed) && (manualScoring) && (!gameScored)) {
+        [self lockFocus];
+        [[self window] flushWindow];
+        [gameMessage setStringValue:@"Please remove dead groups"];
+        [gameMessage2 setStringValue:@"When finished, press Start..."];
+        [self display];
+        [self unlockFocus];
+        [passButton setEnabled:NO];
+        [stopButton setEnabled:NO];
+        finished = 1;
+        scoringGame = YES;
     }
 
   return self;
@@ -1152,13 +1107,13 @@ the scoring.", "OK", 0, 0);
 	  black_Score = (float)blackTerritory - (float)blackCaptured;
 	  white_Score = (float)whiteTerritory - (float)whiteCaptured;
 	  white_Score += (handicap == 0)?KOMI:0.5;
-	  [TypeOfScoring setStringValue:"Japanese Scoring Method"];
-	  [BlackTerrString setStringValue:"Territory"];
-	  [WhiteTerrString setStringValue:"Territory"];
+	  [TypeOfScoring setStringValue:@"Japanese Scoring Method"];
+	  [BlackTerrString setStringValue:@"Territory"];
+	  [WhiteTerrString setStringValue:@"Territory"];
 	  [BlackTerrValue setIntValue:blackTerritory];
 	  [WhiteTerrValue setIntValue:whiteTerritory];
-	  [BlackPrisonString setStringValue:"Prisoners"];
-	  [WhitePrisonString setStringValue:"Prisoners"];
+	  [BlackPrisonString setStringValue:@"Prisoners"];
+	  [WhitePrisonString setStringValue:@"Prisoners"];
 	  [BlackPrisonValue setIntValue:blackCaptured];
 	  [WhitePrisonValue setIntValue:whiteCaptured];
 	  [BlackTotalValue setFloatValue:black_Score];
@@ -1176,13 +1131,13 @@ the scoring.", "OK", 0, 0);
 	  black_Score = (float)blackTerritory + (float)blackStones;
 	  white_Score = (float)whiteTerritory + (float)whiteStones;
 	  white_Score += (handicap == 0)?KOMI:0.5;
-	  [TypeOfScoring setStringValue:"Chinese Scoring Method"];
-	  [BlackTerrString setStringValue:"Territory"];
-	  [WhiteTerrString setStringValue:"Territory"];
+	  [TypeOfScoring setStringValue:@"Chinese Scoring Method"];
+	  [BlackTerrString setStringValue:@"Territory"];
+	  [WhiteTerrString setStringValue:@"Territory"];
 	  [BlackTerrValue setIntValue:blackTerritory];
 	  [WhiteTerrValue setIntValue:whiteTerritory];
-	  [BlackPrisonString setStringValue:"Stones"];
-	  [WhitePrisonString setStringValue:"Stones"];
+	  [BlackPrisonString setStringValue:@"Stones"];
+	  [WhitePrisonString setStringValue:@"Stones"];
 	  [BlackPrisonValue setIntValue:blackStones];
 	  [WhitePrisonValue setIntValue:whiteStones];
 	  [BlackTotalValue setFloatValue:black_Score];
@@ -1195,9 +1150,9 @@ the scoring.", "OK", 0, 0);
       if (black_Score == white_Score)
 	sprintf(s, "Result:  The game was a tie.");
       [KomiValue setFloatValue:((handicap == 0)?KOMI:0.5)];
-      [GameResult setStringValue:s];
+      [GameResult setStringValue:[NSString stringWithCString:s]];
       [ScoringWindow makeKeyAndOrderFront:self];
-      [gameMessage setStringValue:"Game Over"];
+      [gameMessage setStringValue:@"Game Over"];
       [self lockFocus];
       [self display];
       [self unlockFocus];
@@ -1313,7 +1268,7 @@ the scoring.", "OK", 0, 0);
 //    PSsetalpha (0.666);
 //  }
 //  PSfill ();
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
   
@@ -1321,7 +1276,7 @@ the scoring.", "OK", 0, 0);
     
     PSarc (RADIUS, RADIUS, 
 	   RADIUS, 0.0, 360.0);
-  PSsetgray (NX_BLACK);
+  PSsetgray (NSBlack);
   PSfill ();
   
   // And the lighter & darker spots on the stone...
@@ -1330,13 +1285,13 @@ the scoring.", "OK", 0, 0);
 	    RADIUS-SHADOWOFFSET-3.0, 170.0, 100.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 100.0, 170.0);
-  PSsetgray (NX_DKGRAY);
+  PSsetgray (NSDarkGray);
   PSfill ();
   PSarcn (RADIUS, RADIUS, 
 	  RADIUS-SHADOWOFFSET-3.0, 350.0, 280.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 280.0, 350.0);
-  PSsetgray (NX_LTGRAY);
+  PSsetgray (NSLightGray);
   PSfill ();
   
   return self;
@@ -1355,7 +1310,7 @@ the scoring.", "OK", 0, 0);
 //    PSsetalpha (0.666);
 //  }
 //  PSfill ();
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
   
@@ -1363,7 +1318,7 @@ the scoring.", "OK", 0, 0);
     
     PSarc (RADIUS, RADIUS, 
 	   RADIUS, 0.0, 360.0);
-  PSsetgray (NX_WHITE);
+  PSsetgray (NSWhite);
   PSfill ();
   
   // And the lighter & darker spots on the stone...
@@ -1372,13 +1327,13 @@ the scoring.", "OK", 0, 0);
 	    RADIUS-SHADOWOFFSET-3.0, 170.0, 100.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 100.0, 170.0);
-  PSsetgray (NX_LTGRAY);
+  PSsetgray (NSLightGray);
   PSfill ();
   PSarcn (RADIUS, RADIUS, 
 	  RADIUS-SHADOWOFFSET-3.0, 350.0, 280.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 280.0, 350.0);
-  PSsetgray (NX_DKGRAY);
+  PSsetgray (NSDarkGray);
   PSfill ();
   
   return self;
@@ -1397,7 +1352,7 @@ the scoring.", "OK", 0, 0);
 //    PSsetalpha (0.666);
 //  }
 //  PSfill ();
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
   
@@ -1407,7 +1362,7 @@ the scoring.", "OK", 0, 0);
 //	   RADIUS-SHADOWOFFSET, 0.0, 360.0);
     PSarc (RADIUS, RADIUS, 
 	   RADIUS, 0.0, 360.0);
-  PSsetgray (NX_DKGRAY);
+  PSsetgray (NSDarkGray);
   PSfill ();
   
   // And the lighter & darker spots on the stone...
@@ -1416,13 +1371,13 @@ the scoring.", "OK", 0, 0);
 	    RADIUS-SHADOWOFFSET-3.0, 170.0, 100.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 100.0, 170.0);
-  PSsetgray (NX_LTGRAY);
+  PSsetgray (NSLightGray);
   PSfill ();
   PSarcn (RADIUS, RADIUS, 
 	  RADIUS-SHADOWOFFSET-3.0, 350.0, 280.0);
   PSarc (RADIUS, RADIUS, 
 	 RADIUS-SHADOWOFFSET-2.0, 280.0, 350.0);
-  PSsetgray (NX_WHITE);
+  PSsetgray (NSWhite);
   PSfill ();
   
   return self;
@@ -1430,19 +1385,19 @@ the scoring.", "OK", 0, 0);
 
 - drawUpperLeft:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(bounds.size.width,RADIUS);
+  PSlineto([self bounds].size.width,RADIUS);
   PSmoveto(RADIUS, RADIUS);
   PSlineto(RADIUS, 0.0);
   PSmoveto(RADIUS-SHADOWOFFSET, RADIUS+SHADOWOFFSET);
-  PSlineto(bounds.size.width, RADIUS+SHADOWOFFSET);
+  PSlineto([self bounds].size.width, RADIUS+SHADOWOFFSET);
   PSmoveto(RADIUS-SHADOWOFFSET, RADIUS+SHADOWOFFSET);
   PSlineto(RADIUS-SHADOWOFFSET, 0.0);
   PSstroke();
@@ -1452,9 +1407,9 @@ the scoring.", "OK", 0, 0);
 
 - drawUpperRight:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
@@ -1474,21 +1429,21 @@ the scoring.", "OK", 0, 0);
 
 - drawLowerLeft:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(bounds.size.width,RADIUS);
+  PSlineto([self bounds].size.width,RADIUS);
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(RADIUS, bounds.size.height);
+  PSlineto(RADIUS, [self bounds].size.height);
   PSmoveto(RADIUS-SHADOWOFFSET, RADIUS-SHADOWOFFSET);
-  PSlineto(bounds.size.width, RADIUS-SHADOWOFFSET);
+  PSlineto([self bounds].size.width, RADIUS-SHADOWOFFSET);
   PSmoveto(RADIUS-SHADOWOFFSET, RADIUS-SHADOWOFFSET);
-  PSlineto(RADIUS-SHADOWOFFSET, bounds.size.height);
+  PSlineto(RADIUS-SHADOWOFFSET, [self bounds].size.height);
   PSstroke();
 
   return self;
@@ -1496,9 +1451,9 @@ the scoring.", "OK", 0, 0);
 
 - drawLowerRight:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
@@ -1506,11 +1461,11 @@ the scoring.", "OK", 0, 0);
   PSmoveto(RADIUS, RADIUS);
   PSlineto(0.0,RADIUS);
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(RADIUS, bounds.size.height);
+  PSlineto(RADIUS, [self bounds].size.height);
   PSmoveto(RADIUS+SHADOWOFFSET, RADIUS-SHADOWOFFSET);
   PSlineto(0.0, RADIUS-SHADOWOFFSET);
   PSmoveto(RADIUS+SHADOWOFFSET, RADIUS-SHADOWOFFSET);
-  PSlineto(RADIUS+SHADOWOFFSET, bounds.size.height);
+  PSlineto(RADIUS+SHADOWOFFSET, [self bounds].size.height);
   PSstroke();
 
   return self;
@@ -1518,18 +1473,18 @@ the scoring.", "OK", 0, 0);
 
 - drawMidLeft:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(bounds.size.width,RADIUS);
-  PSmoveto(RADIUS, bounds.size.height);
+  PSlineto([self bounds].size.width,RADIUS);
+  PSmoveto(RADIUS, [self bounds].size.height);
   PSlineto(RADIUS, 0.0);
-  PSmoveto(RADIUS-SHADOWOFFSET, bounds.size.height);
+  PSmoveto(RADIUS-SHADOWOFFSET, [self bounds].size.height);
   PSlineto(RADIUS-SHADOWOFFSET, 0.0);
   PSstroke();
 
@@ -1538,18 +1493,18 @@ the scoring.", "OK", 0, 0);
 
 - drawMidRight:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(RADIUS, RADIUS);
   PSlineto(0.0,RADIUS);
-  PSmoveto(RADIUS, bounds.size.height);
+  PSmoveto(RADIUS, [self bounds].size.height);
   PSlineto(RADIUS, 0.0);
-  PSmoveto(RADIUS+SHADOWOFFSET, bounds.size.height);
+  PSmoveto(RADIUS+SHADOWOFFSET, [self bounds].size.height);
   PSlineto(RADIUS+SHADOWOFFSET, 0.0);
   PSstroke();
 
@@ -1558,9 +1513,9 @@ the scoring.", "OK", 0, 0);
 
 - drawMidTop:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
@@ -1568,9 +1523,9 @@ the scoring.", "OK", 0, 0);
   PSmoveto(RADIUS, RADIUS);
   PSlineto(RADIUS,0.0);
   PSmoveto(0.0, RADIUS);
-  PSlineto(bounds.size.width, RADIUS);
+  PSlineto([self bounds].size.width, RADIUS);
   PSmoveto(0.0, RADIUS+SHADOWOFFSET);
-  PSlineto(bounds.size.width, RADIUS+SHADOWOFFSET);
+  PSlineto([self bounds].size.width, RADIUS+SHADOWOFFSET);
   PSstroke();
 
   return self;
@@ -1578,19 +1533,19 @@ the scoring.", "OK", 0, 0);
 
 - drawMidBottom:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(RADIUS, RADIUS);
-  PSlineto(RADIUS,bounds.size.height);
+  PSlineto(RADIUS,[self bounds].size.height);
   PSmoveto(0.0, RADIUS);
-  PSlineto(bounds.size.width, RADIUS);
+  PSlineto([self bounds].size.width, RADIUS);
   PSmoveto(0.0, RADIUS-SHADOWOFFSET);
-  PSlineto(bounds.size.width, RADIUS-SHADOWOFFSET);
+  PSlineto([self bounds].size.width, RADIUS-SHADOWOFFSET);
   PSstroke();
 
   return self;
@@ -1598,16 +1553,16 @@ the scoring.", "OK", 0, 0);
 
 - drawInnerSquare:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(0.0, RADIUS);
-  PSlineto(bounds.size.width,RADIUS);
-  PSmoveto(RADIUS, bounds.size.height);
+  PSlineto([self bounds].size.width,RADIUS);
+  PSmoveto(RADIUS, [self bounds].size.height);
   PSlineto(RADIUS, 0.0);
   PSstroke();
 
@@ -1616,16 +1571,16 @@ the scoring.", "OK", 0, 0);
 
 - drawInnerHandicap:imageRep
 {
-  PSsetgray(NX_BLACK);
+  PSsetgray(NSBlack);
   PSsetlinewidth(0.0);
-  if (NXDrawingStatus == NX_DRAWING) {
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
     PSsetalpha (1.0);
   }
 
   PSnewpath();
   PSmoveto(0.0, RADIUS);
-  PSlineto(bounds.size.width,RADIUS);
-  PSmoveto(RADIUS, bounds.size.height);
+  PSlineto([self bounds].size.width,RADIUS);
+  PSmoveto(RADIUS, [self bounds].size.height);
   PSlineto(RADIUS, 0.0);
   PSstroke();
   
@@ -1639,31 +1594,31 @@ the scoring.", "OK", 0, 0);
   
   - showBlackStone 
 {
-  NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+  NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 		      {floor(STONEWIDTH), floor(STONEHEIGHT)}};
-  [blackStone composite:NX_SOVER toPoint:&tmpRect.origin];
+  [blackStone compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   return self;
 }
 
 - showWhiteStone
 {
-  NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+  NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 		      {floor(STONEWIDTH), floor(STONEHEIGHT)}};
-  [whiteStone composite:NX_SOVER toPoint:&tmpRect.origin];
+  [whiteStone compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   return self;
 }
 
 - showGrayStone
 {
-  NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+  NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 		      {floor(STONEWIDTH), floor(STONEHEIGHT)}};
-  [grayStone composite:NX_SOVER toPoint:&tmpRect.origin];
+  [grayStone compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   return self;
 }
 
 - eraseStone
 {
-  NXRect tmpRect = {{floor(stoneX), floor(stoneY)}, {floor(STONEWIDTH), floor(STONEHEIGHT)}};
+  NSRect tmpRect = {{floor(stoneX), floor(stoneY)}, {floor(STONEWIDTH), floor(STONEHEIGHT)}};
   return [self drawBackground:&tmpRect];
 }
 
@@ -1672,34 +1627,34 @@ the scoring.", "OK", 0, 0);
 
 - showBackgroundPiece: (int)x: (int)y {
   int q;
-  NXRect tmpRect = {{floor(stoneX), floor(stoneY)}, {floor(STONEWIDTH), floor(STONEHEIGHT)}};
+  NSRect tmpRect = {{floor(stoneX), floor(stoneY)}, {floor(STONEWIDTH), floor(STONEHEIGHT)}};
 
   if ((x == 0) && (y == 0))
-    [upperLeft composite:NX_SOVER toPoint:&tmpRect.origin];
+    [upperLeft compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x == 0) && (y == MAXY - 1))
-    [lowerLeft composite:NX_SOVER toPoint:&tmpRect.origin];
+    [lowerLeft compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x == MAXX - 1) && (y == 0))
-    [upperRight composite:NX_SOVER toPoint:&tmpRect.origin];
+    [upperRight compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x == MAXX - 1) && (y == MAXY - 1))
-    [lowerRight composite:NX_SOVER toPoint:&tmpRect.origin];
+    [lowerRight compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x == 0) && (y > 0) && (y < MAXY - 1))
-    [midLeft composite:NX_SOVER toPoint:&tmpRect.origin];
+    [midLeft compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x == MAXX - 1) && (y > 0) && (y < MAXY - 1))
-    [midRight composite:NX_SOVER toPoint:&tmpRect.origin];
+    [midRight compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x > 0) && (x < MAXX - 1) && (y == 0))
-    [midTop composite:NX_SOVER toPoint:&tmpRect.origin];
+    [midTop compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x > 0) && (x < MAXX - 1) && (y == MAXY - 1))
-    [midBottom composite:NX_SOVER toPoint:&tmpRect.origin];
+    [midBottom compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
   
   if ((x > 0) && (x < MAXX - 1) && (y > 0) && (y < MAXY - 1))
-    [innerSquare composite:NX_SOVER toPoint:&tmpRect.origin];
+    [innerSquare compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
     
   if (MAXX < 13)
     q = 2;
@@ -1711,35 +1666,34 @@ the scoring.", "OK", 0, 0);
       ((x == MAXX/2) && (y == MAXY/2)) || ((x == MAXX/2) && (y == MAXY-q-1)) ||
       ((x == MAXX-q-1) && (y == q)) || ((x == MAXX-q-1) && (y == MAXY/2)) ||
       ((x == MAXX-q-1) && (y == MAXY-q-1)))
-    [innerHandicap composite:NX_SOVER toPoint:&tmpRect.origin];
+    [innerHandicap compositeToPoint:tmpRect.origin operation:NSCompositeSourceOver];
 
   return self;
 }
   
-  - drawBackground:(NXRect *)rect
+  - drawBackground:(NSRect *)rect
 {
-  NXRect tmpRect = *rect;
+  NSRect tmpRect = *rect;
   
-  NX_X(&tmpRect) = floor(NX_X(&tmpRect));
-  NX_Y(&tmpRect) = floor(NX_Y(&tmpRect));
-  if (NXDrawingStatus == NX_DRAWING) {
-    PSsetgray (NX_WHITE);
-    PScompositerect (NX_X(&tmpRect), NX_Y(&tmpRect),
-		     NX_WIDTH(&tmpRect), NX_HEIGHT(&tmpRect), NX_COPY);
+  (&tmpRect)->origin.x = floor(NSMinX(tmpRect));
+  (&tmpRect)->origin.y = floor(NSMinY(tmpRect));
+  if ([[NSDPSContext currentContext] isDrawingToScreen]) {
+    PSsetgray (NSWhite);
+    PScompositerect (NSMinX(tmpRect), NSMinY(tmpRect),
+		     NSWidth(tmpRect), NSHeight(tmpRect), NSCompositeCopy);
   }
-  [backGround composite:NX_SOVER fromRect:&tmpRect toPoint:&tmpRect.origin];
+  [backGround compositeToPoint:tmpRect.origin fromRect:tmpRect operation:NSCompositeSourceOver];
   return self;
 }
 
 // drawSelf::, a method every decent View should have, redraws the game
 // in its current state. This allows us to print the game very easily.
   
-  - drawSelf:(NXRect *)rects :(int)rectCount 
-{
+- (void)drawRect:(NSRect)rects {
   int xcnt, ycnt;
   char s[5], specialChar;
-  
-  [self drawBackground:(rects ? rects : &bounds)];
+  NSRect  aRect = [self bounds];
+  [self drawBackground:(&rects ? &rects : &aRect)];
 
   specialChar = 'a';
 
@@ -1760,7 +1714,7 @@ the scoring.", "OK", 0, 0);
 		  char s[5];
 		  
 		  [historyFont set];
-		  PSsetgray(NX_BLACK);
+		  PSsetgray(NSBlack);
 		  PSmoveto(stoneX+RADIUS -
 			   (floor(log(hist[xcnt][ycnt]+0.5)/log(10))+1.0)*3,
 			   stoneY+RADIUS - 4);
@@ -1782,7 +1736,7 @@ the scoring.", "OK", 0, 0);
 		  char s[5];
 
 		  [historyFont set];
-		  PSsetgray(NX_WHITE);
+		  PSsetgray(NSWhite);
 		  PSmoveto(stoneX+RADIUS -
 			   (floor(log(hist[xcnt][ycnt]+0.5)/log(10))+1.0)*3,
 			   stoneY+RADIUS - 4);
@@ -1802,19 +1756,19 @@ the scoring.", "OK", 0, 0);
 	      break;
 	    case WHITE_TERR: [self showBackgroundPiece: xcnt: ycnt];
 	      [whiteTerrFont set];
-	      PSsetgray(NX_WHITE);
+	      PSsetgray(NSWhite);
 	      PSmoveto(stoneX+RADIUS/3, stoneY+RADIUS/3+2);
 	      PSshow("W");
 	      break;
 	    case BLACK_TERR: [self showBackgroundPiece: xcnt: ycnt];
 	      [blackTerrFont set];
-	      PSsetgray(NX_DKGRAY);
+	      PSsetgray(NSDarkGray);
 	      PSmoveto(stoneX+RADIUS/3+1, stoneY+RADIUS/3);
 	      PSshow("B");
 	      break;
 	    case SPECIAL_CHAR: [self showBackgroundPiece: xcnt: ycnt];
 	      PSselectfont("Helvetica", 25.0);
-	      PSsetgray(NX_DKGRAY);
+	      PSsetgray(NSDarkGray);
 	      PSmoveto(stoneX+RADIUS/3+1, stoneY+RADIUS/3);
 	      sprintf(s,"%c",specialChar);
 	      specialChar++;
@@ -1834,7 +1788,7 @@ the scoring.", "OK", 0, 0);
 	  setStoneLoc(xcnt, 0);
 
 	  [historyFont set];
-	  PSsetgray(NX_DKGRAY);
+	  PSsetgray(NSDarkGray);
 	  PSmoveto(stoneX + RADIUS - 3, stoneY + RADIUS + 11);
 	  s[0] = 'A' + xcnt;
 	  if (xcnt > 7) s[0]++;
@@ -1850,7 +1804,7 @@ the scoring.", "OK", 0, 0);
 	  setStoneLoc(0, ycnt);
 
 	  [historyFont set];
-	  PSsetgray(NX_DKGRAY);
+	  PSsetgray(NSDarkGray);
 	  PSmoveto(stoneX - 4, stoneY + RADIUS - 4);
 	  sprintf(s, "%d", MAXY-ycnt);
 	  PSshow(s);
@@ -1867,66 +1821,58 @@ the scoring.", "OK", 0, 0);
 	  PSshow(s);
 	}
     }
-  
-  return self;
 }
 
-- print:sender
-{
-  return [self printPSCode:sender];
-}
+- step {
+//    NSEvent *peek_ev, *get_ev;
 
-- step
-{
-  NXEvent peek_ev, *get_ev;
-  
-  if (gameType == IGSGAME)
-    {
-      return self;
+    if (gameType == IGSGAME) {
+        return self;
     }
-  
-  if (neitherSide)
-    return self;
-    
-  if (((currentStone == BLACKSTONE) && (blackSide == 0)) ||
-      ((currentStone == WHITESTONE) && (whiteSide == 0)))
-    return self;
-  
-  if (bothSides) {
-    while ((gameRunning) && (!finished)) {
-      [self selectMove];
-      NXPing();
 
-      if( [NXApp peekNextEvent: NX_MOUSEDOWNMASK into: &peek_ev] ){
-	get_ev = [NXApp getNextEvent: NX_MOUSEDOWNMASK];
-	[NXApp sendEvent: get_ev];
-      }
+    if (neitherSide)
+        return self;
+
+    if (((currentStone == BLACKSTONE) && !blackSide) ||
+        ((currentStone == WHITESTONE) && !whiteSide))
+        return self;
+
+    if (bothSides) {
+        while ((gameRunning) && (!finished)) {
+            [self selectMove];
+            PSWait();
+/*
+            if( peek_ev = [NSApp nextEventMatchingMask:NSLeftMouseDownMask untilDate:[NSDate distantFuture] inMode:NSEventTrackingRunLoopMode dequeue:NO] ){
+                get_ev = [ [self window] nextEventMatchingMask:NSLeftMouseDownMask untilDate:[NSDate distantFuture] inMode:NSEventTrackingRunLoopMode dequeue:YES];
+                [NSApp sendEvent: get_ev];
+            }
+*/
+        }
+
+        PSWait();
     }
-  
-    NXPing();
-  } else {
-    [passButton setEnabled: NO];
-    [self selectMove];
+    else {
+        [passButton setEnabled:NO];
+        [self selectMove];
 
-    NXPing();
+        PSWait();
 
-    NXPing();
-    [passButton setEnabled: YES];
-    NXPing();
-  }
-  return self;
+        PSWait();
+        [passButton setEnabled:YES];
+        PSWait();
+    }
+    return self;
 }
 
-- selectMove
-{
-  int i, j;
-  
-  NXPing();
+- selectMove {
+    int i, j;
 
-  if( !bothSides )
-    [stopButton setEnabled: NO];
+    PSWait();
+
+    if( !bothSides )
+    [stopButton setEnabled:NO];
   else
-    [stopButton setEnabled: YES];
+    [stopButton setEnabled:YES];
 
   for (i = 0; i < MAXX; i++)
     for (j = 0; j < MAXY; j++)
@@ -1968,26 +1914,26 @@ the scoring.", "OK", 0, 0);
   
   if ([showHistFlag intValue])
     {
-      NXRect tmpRect = {{floor(stoneX), floor(stoneY)},
+      NSRect tmpRect = {{floor(stoneX), floor(stoneY)},
 			  {floor(STONEWIDTH), floor(STONEHEIGHT)}};
 
       [self lockFocus];
-      [self drawSelf:&tmpRect :0];
+      [self drawRect:tmpRect];
       [self display];
       [self unlockFocus];
     }
 
-  NXPing();
+  PSWait();
   return self;
 }
 
 - selectMoveEnd
 {
-  NXPing();
+  PSWait();
 
-  [startButton setEnabled: YES];
-  [stopButton setEnabled: YES];
-  NXPing();
+  [startButton setEnabled:YES];
+  [stopButton setEnabled:YES];
+  PSWait();
 
   return self;
 }
@@ -2006,7 +1952,7 @@ the scoring.", "OK", 0, 0);
 
 - setMess1:(char *)s
 {
-  [gameMessage setStringValue:s];
+  [gameMessage setStringValue:[NSString stringWithCString:s]];
   [gameMessage display];
 
   return self;
@@ -2014,7 +1960,7 @@ the scoring.", "OK", 0, 0);
 
 - setMess2:(char *)s
 {
-  [gameMessage2 setStringValue:s];
+  [gameMessage2 setStringValue:[NSString stringWithCString:s]];
   [gameMessage2 display];
 
   return self;
@@ -2036,11 +1982,11 @@ the scoring.", "OK", 0, 0);
   return self;
 }
 
-- (float)startZeit {
+- (long)startZeit {
 	return startZeit;
 }
 
-- setStartZeit:(float)aTime {
+- setStartZeit:(long)aTime {
 	startZeit = aTime;
 	return self;
 }
@@ -2058,23 +2004,58 @@ the scoring.", "OK", 0, 0);
 	[self removeTE];	
   	[self setblacksPrisoners:0];
   	[self setwhitesPrisoners:0];
-	[IGSGameNumber setStringValue:""]; 
-	[IGSBlackPlayer setStringValue:""]; 
-	[IGSWhitePlayer setStringValue:""]; 
-	[IGShandicap setStringValue:""]; 
-	[IGSkomi setStringValue:""];
-	[blackTime setStringValue:""];
-	[whiteTime setStringValue:""];
+	[IGSGameNumber setStringValue:@""]; 
+	[IGSBlackPlayer setStringValue:@""]; 
+	[IGSWhitePlayer setStringValue:@""]; 
+	[IGShandicap setStringValue:@""]; 
+	[IGSkomi setStringValue:@""];
+	[blackTime setStringValue:@""];
+	[whiteTime setStringValue:@""];
 
-	
 	return self;
 }
 
 - removeTE {
-	if (te) 
-		DPSRemoveTimedEntry(te);
-	te = 0;
-	return self;
+    if (te) {
+	[te invalidate];
+        [te release];
+        te = 0;
+    }
+    return self;
+}
+
+- (void) TEHandler:(NSTimer *)aTimer {
+    id obj;
+    NSString *buf;
+    int myTime, now;
+    struct timeval tp;
+    struct timezone tzp;
+    gettimeofday(&tp, &tzp);
+    now = tp.tv_sec;
+
+    obj  = [aTimer userInfo];
+
+    if ([obj startZeit] == 0L) {
+        [obj setStartZeit:now];
+    }
+    myTime = ts.time - (now - [obj startZeit]);
+#ifdef TIMEDEBUG
+    printf("TEHandler: now = %ld, startZeit = %ld, ts.time = %d, myTime = %d\n", now, [obj startZeit], ts.time, myTime); 
+#endif
+    if (myTime < 0) {
+        if (ts.byo == -1 || 		/* player is in normal game time */
+            ts.byo == 25) { 		/* player is in byo-yomi but did 	*/
+                                        /* not yet move */
+            myTime += [obj ByoTime] * 60;
+            ts.byo = 25;
+        }
+    }
+    buf = [NSString stringWithFormat:@"%d:%02d", myTime / 60, myTime % 60];
+    if (ts.byo != -1) {
+        buf = [buf stringByAppendingFormat:@", %d", ts.byo];
+    }
+    [ts.timeToHandle setStringValue:buf];
+    [ts.timeToHandle display];
 }
 
 @end

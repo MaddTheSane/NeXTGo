@@ -1,9 +1,12 @@
 #include "comment.header"
 
-/* $Id: Board.h,v 1.3 1997/07/06 19:38:19 ergo Exp $ */
+/* $Id: Board.h,v 1.4 1997/11/04 16:49:19 ergo Exp $ */
 
 /*
  * $Log: Board.h,v $
+ * Revision 1.4  1997/11/04 16:49:19  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:38:19  ergo
  * actual version
  *
@@ -12,9 +15,10 @@
  *
  */
 
-#import <appkit/View.h>
-#import <soundkit/Sound.h>
-#import <dpsclient/dpsNeXT.h>
+#import <AppKit/NSView.h>
+#import <SoundKit/Sound.h>
+#import <AppKit/dpsOpenStep.h>
+#import <AppKit/NSDPSContext.h>
 #include "history.h"
 
 // Maximum number of tiles in the playing area...
@@ -27,34 +31,33 @@ extern unsigned char patternmat[19][19], scoringmat[19][19], ownermat[19][19];
 extern unsigned char tempmat[19][19], newpatternmat[19][19], mark[19][19];
 extern char special_characters[19][19];
 extern int hist[19][19], currentMoveNumber;
-extern int rd, bothSides, neitherSide, blackSide, whiteSide, MAXX, MAXY;
+extern int rd, bothSides, neitherSide, MAXX, MAXY;
 extern int opn[9], blackCaptured, whiteCaptured, handicap;
 extern int currentStone, opposingStone, blackPassed, whitePassed;
-extern int blackTerritory, whiteTerritory, SmartGoGameFlag;
-extern int AGAScoring, manualScoring, manScoreTemp, typeOfScoring, gameType;
+extern int blackTerritory, whiteTerritory, manScoreTemp, SmartGoGameFlag;
+extern BOOL AGAScoring, manualScoring, typeOfScoring, gameType;
 extern float black_Score, white_Score;
 extern gameHistory gameMoves[500];
 extern int lastMove;
-extern BOOL finished;
-BOOL scoringGame, resultsDisplayed;
+extern BOOL finished, blackSide, whiteSide;
+extern BOOL scoringGame, resultsDisplayed;
 typedef struct {
-	id caller;
-	id timeToHandle;
+	id timeToHandle;	// display of black or white time
 	int time;
 	int byo;
 	} TimeStruct;  
 	
 
 
-@interface GoView:View 
+@interface GoView:NSView 
 {
   
   BOOL gameRunning, gameScored;
-  
+    NSImage 	*backGround; 
+
 	id 	blackStone, 
   		whiteStone, 
 		grayStone, 
-		backGround, 
 		gameMessage, 
 		blacksPrisoners, 
 		whitesPrisoners, 
@@ -104,8 +107,8 @@ typedef struct {
 	id	ControlPanel;
 		
 	int bTime, bByo, wTime, wByo;
-	DPSTimedEntry te;
-	float startZeit;
+	NSTimer *te;
+	long startZeit;
 	TimeStruct	ts;
 	int ByoTime;		/* time in byo-yomi in minutes 	*/
 	long time;			/* time we received a move 		*/
@@ -115,13 +118,13 @@ typedef struct {
 /* The following methods can be called by Interface Builder objects &
    during creation/destruction of instances of BreakView.  */
   
-- initFrame:(const NXRect *)frm;
-- free;
+- initWithFrame:(NSRect)frm;
+- (void)dealloc;
 
 - resetButtons;
 - startNewGame;
 - go:sender;
-- stop:sender;
+- (void)stop:(id)sender;
 - passMove;
 - showLastMove:sender;
 - undo;
@@ -141,8 +144,8 @@ typedef struct {
    by others.  */
   
 - setBackgroundFile:(const char *)fileName andRemember:(BOOL)remember;
-- drawSelf:(NXRect *)rects :(int)rectCount;
-- drawBackground:(NXRect *)rect;
+- (void)drawRect:(NSRect)rects;
+- drawBackground:(NSRect *)rect;
 - showBlackStone;
 - showWhiteStone;
 - showGrayStone;
@@ -170,11 +173,12 @@ typedef struct {
 - flashStone: (int)x :(int)y;
 - setblacksPrisoners:(int)bp;
 - setwhitesPrisoners:(int)wp;
-- (float)startZeit;
-- setStartZeit:(float)aTime;
+- (long)startZeit;
+- setStartZeit:(long)aTime;
 - (int)bByo;
 - (TimeStruct*)ts;
 - gameCompleted;
 - removeTE;
 
+- (void) TEHandler:(NSTimer *)aTimer;
 @end

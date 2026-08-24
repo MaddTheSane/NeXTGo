@@ -4,15 +4,15 @@
 
 @implementation GoWindow
 
-- keyDown:(NXEvent *)theEvent {
+- (void)keyDown:(NSEvent *)theEvent  {
 	if([ControlPanel isVisible]) {
 		[ControlPanel makeKeyAndOrderFront:self];
 		[ControlPanel sendEvent:theEvent];
-		[NXApp setCommandSender:self];
-		return self;
+		[NSApp setCommandSender:self];
+		return;
 	}
 	else 
-		return [super keyDown:theEvent];
+		[super keyDown:theEvent];
 }
 
 @end

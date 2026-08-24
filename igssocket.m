@@ -1,9 +1,12 @@
 #include "comment.header"
 
-/* $Id: igssocket.m,v 1.3 1997/07/06 19:38:00 ergo Exp $ */
+/* $Id: igssocket.m,v 1.4 1997/11/04 16:52:57 ergo Exp $ */
 
 /*
  * $Log: igssocket.m,v $
+ * Revision 1.4  1997/11/04 16:52:57  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:38:00  ergo
  * actual version
  *
@@ -33,7 +36,7 @@
 #endif
 #include "igs.h"
 
-#import <appkit/appkit.h>
+#import <AppKit/AppKit.h>
 #import "GoApp.h"
 
 /* For some odd systems, which don't put this in errno.h. */
@@ -73,7 +76,7 @@ int open_connection()
   char s[80];
 
   sprintf(s, "Opening connection to %s %d\n", servename, serveport);
-  [NXApp SetIGSStatus:s];
+  [NSApp SetIGSStatus:s];
 #ifdef DEBUG
   	{
     	int d;
@@ -130,12 +133,11 @@ int open_connection()
   return 0;
 }
 
-void sendstr(char *buf)
-{
-  write(sock, buf, strlen(buf));
+void sendstr(char *buf) {
+    write(sock, buf, strlen(buf));
 #ifdef DEBUG
-  fprintf(blah, ">%s<\n", buf);
-  fflush(blah);
+    fprintf(blah, ">%s<\n", buf);
+    fflush(blah);
 #endif
 }
 

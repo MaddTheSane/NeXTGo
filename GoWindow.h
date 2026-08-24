@@ -1,7 +1,7 @@
 
-#import <appkit/appkit.h>
+#import <AppKit/AppKit.h>
 
-@interface GoWindow:Window
+@interface GoWindow:NSWindow
 {
 	id	ControlPanel;
 	id Receiver;

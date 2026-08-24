@@ -3,136 +3,107 @@
 
 @implementation GoServer
 
-- init
-{
-	name = [ [MiscString alloc] init];
++ (GoServer*)initFromPref:(int)i {
+    NSString *buf = [[NSString alloc] initWithFormat:@"%@%d",@"Server", i];
+    return [ [NSUserDefaults standardUserDefaults] objectForKey:buf] ;
+}
+
+- init {
+	name = [ [NSString alloc] init];
 	port = 0;
-	login = [ [MiscString alloc] init];
-	password = [ [MiscString alloc] init];
+	login = [ [NSString alloc] init];
+	password = [ [NSString alloc] init];
 	return self;
 }
 
-- initFromString:(id)aString {
+- (GoServer*)initFromString:(NSString*)aString {
 
-	id buf = [ [MiscString alloc] init];
-	
-	if (name) {
-		[name free];
-		name = 0;
-	}
-	name = [aString extractPart:MISC_STRING_FIRST useAsDelimiter:' '];
+    NSString *buf;
+    NSArray *listItems = [aString componentsSeparatedByString:@" "];
 
-	buf = [aString extractPart:MISC_STRING_FIRST+1 useAsDelimiter:' '];
-	sscanf([buf stringValue], "%d", &port);
-	
-	if (login) {
-		[login free];
-		login = 0;
-	}
-	login = [aString extractPart:MISC_STRING_FIRST+2 useAsDelimiter:' '];
-	
-	if (password) {
-		[password free];
-		password = 0;
-	}
-	password = [aString extractPart:MISC_STRING_FIRST+3 useAsDelimiter:' '];
-	
-	return self;
+    if (name) {
+        [name release];
+        name = 0;
+    }
+    name = [ [listItems objectAtIndex:0] retain];
+
+    buf = [listItems objectAtIndex:1];
+    sscanf([buf cString], "%d", &port);
+
+    if (login) {
+        [login release];
+        login = 0;
+    }
+    login = [ [listItems objectAtIndex:2] retain];
+
+    if (password) {
+        [password release];
+        password = 0;
+    }
+    password = [ [listItems objectAtIndex:3] retain];
+
+    return self;
 }
 
-- (id)dumpToString:(id) aStringObject {
-	char buf[256];
- 	[aStringObject setStringValue:[name stringValue]];
-	sprintf(buf, " %d ", port);
-	[aStringObject cat:buf];
-	[aStringObject concatenate:login];
-	[aStringObject cat:" "];
-	[aStringObject concatenate:password];
-	return aStringObject;
+- (NSString*)dumpToString {
+    id portbuf = [ [NSString localizedStringWithFormat:@"%d", port] retain];
+    return [ [NSArray arrayWithObjects:name, portbuf, login, password, nil] componentsJoinedByString:@" "];
+}
+/*
+- (void)saveToPref:(int)i {
+    NSString *buf = [[NSString alloc] initWithFormat:@"%@%d",@"Server", i];
+    [[NSUserDefaults standardUserDefaults] setObject:[self dumpToString] forKey:buf];
 }
 
-- initFromPref:(int)i{
-
-	char buf[256] = "Server";
-	id buffer = [MiscString alloc];
-
-	sprintf(buf+6, "%d", i);
-	[buffer initString: NXGetDefaultValue("NeXTGo",buf)];
-	if ([buffer emptyString]) 
-		return nil;
-	[self initFromString:buffer];
-	return self;
+- (void)removeFromPref:(int)i {
+    NSString *buf = [[NSString alloc] initWithFormat:@"%@%d",@"Server", i];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:buf];
+}
+*/
+- (NSString *)serverName {
+	return name;
 }
 
-- saveToPref:(int)i {
-	char buf[256] = "Server";
-	id buffer = [ [MiscString alloc] init];
-
-	sprintf(buf+6, "%d", i);
-	[self dumpToString:buffer];
-	NXWriteDefault("NeXTGo", buf, [buffer stringValue]);
-	return self;
-}
-
-- removeFromPref:(int)i {
-
-	char buf[256] = "Server";
-
-	sprintf(buf+6, "%d", i);
-	NXRemoveDefault("NeXTGo", buf);
-
-	return self;
-}
-
-- (const char*) name
-{
-	return [name stringValue];
-}
-
-- (int) port
-{
+- (int) port {
 	return port;
 }
 
-- (const char*) login
-{
-	return [login stringValue];
+- (NSString*) login {
+	return login;
 }
 
-- (const char*) password
-{
-	return [password stringValue];
+- (NSString*) password {
+	return password;
 }
 
-- setServerName:(char *) aName
-{
-	[name setStringValue:aName];
-	return self;
+- setServerName:(NSString *) aName {
+    [name release];
+    name = [ [NSString alloc]initWithString:aName];
+    return self;
 }
 
-- setPort:(int) aPort
-{
+- setPort:(int) aPort {
 	port = aPort;
 	return self;
 }
 
-- setLogin:(char *) aLogin
-{
-	[login setStringValue:aLogin];
-	return self;
+- setLogin:(NSString*) aLogin {
+    [login release];
+    login = [ [NSString alloc] initWithString:aLogin];
+    return self;
 }
 
-- setPassword:(char *) aPassword
-{
-	[password setStringValue:aPassword];
-	return self;
+- setPassword:(NSString *) aPassword {
+    [password release];
+    password = [ [NSString alloc] initWithString:aPassword];
+    return self;
 }
 
-- free {
-	[name free];
-	[login free];
-	[password free];	
-	return [super free];
+- (void)dealloc {
+	[name release];
+	[login release];
+	[password release];	
+	{ [super dealloc]; return; };
 }
 
 

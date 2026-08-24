@@ -1,9 +1,12 @@
 #include "comment.header"
 
-/* $Id: godict.c,v 1.3 1997/07/06 19:35:01 ergo Exp $ */
+/* $Id: godict.c,v 1.4 1997/11/04 16:52:59 ergo Exp $ */
 
 /*
  * $Log: godict.c,v $
+ * Revision 1.4  1997/11/04 16:52:59  ergo
+ * ported to OpenStep
+ *
  * Revision 1.3  1997/07/06 19:35:01  ergo
  * actual version
  *
@@ -19,11 +22,12 @@
 #include "godict.h"
 
 #define LANGENTRY(line,label)    (!strncmp(line,label,strlen(label)))
-
+#warning
+/*
 #ifndef _TEST_COMPILE_
-extern int NXRunAlertPanel(const char *title, const char *msg, const char *defaultButton, const char *alternateButton, const char *otherButton, ...);
+extern int NSRunAlertPanel(const char *title, const char *msg, const char *defaultButton, const char *alternateButton, const char *otherButton, ...);
 #endif
-
+*/
 #ifdef _DEBUG_DICT_
 FILE *dump;
 #endif
@@ -63,7 +67,7 @@ GODICT* load_dict(char* filename)
 
 	  sprintf(s, "There is a bad entry on line %d.", linenr);
 #ifndef _TEST_COMPILE_
-	  NXRunAlertPanel("NeXTGo Dictionary", s, "OK", 0, 0);
+	  NSRunAlertPanel(@"NeXTGo Dictionary", [NSString stringWithCString:s], @"OK", nil, nil);
 #endif
 	}
       else if (strncmp(line, RD_CD, strlen(RD_CD)) == 0)
