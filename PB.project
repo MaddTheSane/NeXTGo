@@ -1,0 +1,33 @@
+INSTALLDIR = "$(HOME)/Apps";
+APPICON = NeXTGo.tiff;
+COMPILEROPTIONS = "";
+GENERATEMAIN = YES;
+DOCICONFILES = (NeXTGoFile.tiff);
+FILESTABLE = {
+    M_FILES = (igsglue.m, igssocket.m, NeXTGo_main.m);
+    OTHER_LINKED = ();
+    H_FILES = (AutoWidthMatrix.h, Board.h, ClickCell.h, Controller.h, GameInspectorPanel.h, gnugo.h, GoApp.h, godict.h, GoServer.h, GoWindow.h, history.h, igs.h, MatrixScrollView.h, MiscString.h, patterns.h, ServerList.h, shared.h, smartgo.h, smgcom.h);
+    CLASSES = (AutoWidthMatrix.m, Board.m, ClickCell.m, Controller.m, GameInspectorPanel.m, GoApp.m, GoServer.m, GoWindow.m, MatrixScrollView.m, MiscString.m, MiscStringFields.m, MiscStringInsertion.m, MiscStringModification.m, MiscStringSearching.m, ServerList.m);
+    IMAGES = (Background.tiff, NeXTGo.tiff, NeXTGoFile.tiff);
+    PSW_FILES = ();
+    C_FILES = (count.c, countlib.c, eval.c, exambord.c, findnext.c, findopen.c, findpatn.c, findsavr.c, findwinr.c, fioe.c, genmove.c, godict.c, igsparse.c, initmark.c, matchpat.c, opening.c, openregn.c, random.c, score.c, seed.c, sethand.c, smartgoeval.c, smartgoparse.c, smartgotree.c, suicide.c);
+    OTHER_RESOURCES = (intergo.dct, Makefile, Makefile.postamble, "NeXTGo.background-2.0.draw", NeXTGo.background.draw, NeXTGoHelp.rtf);
+    OTHER_SOURCES = (comment.header, COPYING, Documentation.gnugo, igs.protocol, README, README.gnugo);
+    SUBPROJECTS = ();
+    PSWM_FILES = ();
+    SOUNDS = ();
+    LIBRARYSEARCH = ("");
+    OTHER_LIBS = (Media_s, NeXT_s);
+    INTERFACES = (NeXTGo.nib);
+};
+APPCLASS = GoApp;
+MAINNIB = NeXTGo;
+DOCEXTENSIONS = (nextgo);
+LOCALIZABLE_FILES = {
+};
+PROJECTTYPE = Application;
+LINKEROPTIONS = "-v";
+PROJECTVERSION = 1.1;
+PROJECTNAME = NeXTGo;
+SYSTEMEXTENSIONS = ();
+LANGUAGE = German;
